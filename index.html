@@ -6,7 +6,7 @@
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; background-color: #2b2b2b; color: #fff; }
     #canvas-container { flex: 1; display: flex; justify-content: center; padding: 40px; overflow-y: auto; position: relative; }
-    #newsletter-canvas { width: 700px; min-height: 800px; background-color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative; }
+    #newsletter-canvas { width: 850px; min-height: 800px; background-color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative; }
     #selection-box { position: absolute; border: 1px solid #0d99ff; background-color: rgba(13, 153, 255, 0.2); display: none; pointer-events: none; z-index: 9999; }
     #sidebar { width: 300px; background-color: #1e1e1e; border-left: 1px solid #444; padding: 20px; display: flex; flex-direction: column; overflow-y: auto; z-index: 10000; }
     h2 { font-size: 16px; margin-top: 0; margin-bottom: 20px; color: #ccc; }
@@ -39,13 +39,28 @@
     .block.selected .delete-btn { display: block; }
     .resize-handle { position: absolute; width: 8px; height: 8px; background-color: #fff; border: 1px solid #0d99ff; display: none; z-index: 150; }
     body.single-selection .block.selected .resize-handle { display: block; }
+
+    #multi-selection-box { position: absolute; border: 1.5px dashed #0d99ff; background: rgba(13,153,255,0.05); display: none; pointer-events: none; z-index: 5000; }
+    .multi-handle { position: absolute; width: 10px; height: 10px; background-color: #0d99ff; border: 1px solid #fff; pointer-events: auto; display: none; z-index: 5005; }
+    body.multi-selection-active .multi-handle { display: block; }
+    .mh-nw { top: -6px; left: -6px; cursor: nwse-resize; } .mh-ne { top: -6px; right: -6px; cursor: nesw-resize; }
+    .mh-sw { bottom: -6px; left: -6px; cursor: nesw-resize; } .mh-se { bottom: -6px; right: -6px; cursor: nwse-resize; }
+
     .nw { top: -5px; left: -5px; cursor: nwse-resize; } .n { top: -5px; left: calc(50% - 4px); cursor: ns-resize; } .ne { top: -5px; right: -5px; cursor: nesw-resize; } .e { top: calc(50% - 4px); right: -5px; cursor: ew-resize; }
     .se { bottom: -5px; right: -5px; cursor: nwse-resize; } .s { bottom: -5px; left: calc(50% - 4px); cursor: ns-resize; } .sw { bottom: -5px; left: -5px; cursor: nesw-resize; } .w { top: calc(50% - 4px); left: -5px; cursor: ew-resize; }
   </style>
 </head>
 <body>
   <div id="canvas-container">
-    <div id="newsletter-canvas"><div id="selection-box"></div></div>
+    <div id="newsletter-canvas">
+      <div id="selection-box"></div>
+      <div id="multi-selection-box">
+        <div class="multi-handle mh-nw" data-pos="nw"></div>
+        <div class="multi-handle mh-ne" data-pos="ne"></div>
+        <div class="multi-handle mh-sw" data-pos="sw"></div>
+        <div class="multi-handle mh-se" data-pos="se"></div>
+      </div>
+    </div>
   </div>
 
   <div id="sidebar">
@@ -58,12 +73,11 @@
     <button class="tool-btn" onclick="addBlock('image')">🖼️ Agregar Imagen</button>
     <button class="tool-btn" onclick="addBlock('text')">T Agregar Texto</button>
     <button class="tool-btn" onclick="addBlock('gif')">🎬 Agregar GIF</button>
-    <!-- NUEVA HERRAMIENTA -->
     <button class="tool-btn" onclick="addBlock('spacer')">⬜ Tabla Vacía (Espacio)</button>
     
     <div id="properties-panel">
       <h2 style="margin-bottom: 10px; color: #0d99ff;">Propiedades</h2>
-      <div id="multi-select-msg">Varios bloques seleccionados.<br><small>Suprimir para borrar. Ctrl+C para copiar.</small></div>
+      <div id="multi-select-msg">Varios bloques seleccionados.<br><small>Arrastrá desde las esquinas para cambiar el tamaño en conjunto.</small></div>
       
       <div id="single-properties">
         <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px;">Alinear caja con el lienzo</label>
@@ -145,12 +159,13 @@
 
     <h2 style="margin-top: 30px;">Exportar</h2>
     <button class="tool-btn" onclick="exportEML()" style="background-color: #1FAF38; border-color: #158a29; text-align: center; font-weight:bold;">📥 Exportar a .EML (Outlook)</button>
-    <div style="font-size:10px; color:#666; text-align:center; margin-top:10px;">Versión 0.1.1</div>
+    <div style="font-size:10px; color:#666; text-align:center; margin-top:10px;">Versión 0.1.2</div>
   </div>
 
   <script>
     const canvas = document.getElementById('newsletter-canvas');
     const selectionBox = document.getElementById('selection-box');
+    const multiSelectionBox = document.getElementById('multi-selection-box');
     const propertiesPanel = document.getElementById('properties-panel');
     const singleProperties = document.getElementById('single-properties');
     const multiSelectMsg = document.getElementById('multi-select-msg');
@@ -206,13 +221,36 @@
     }
     const canvasObserver = new MutationObserver(updateCanvasHeight); canvasObserver.observe(canvas, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
 
+    function updateMultiSelectionBoundingBox() {
+      if (selectedBlocks.size <= 1) {
+        multiSelectionBox.style.display = 'none';
+        document.body.classList.remove('multi-selection-active');
+        return;
+      }
+      let minX = Infinity, minY = Infinity, maxX = 0, maxY = 0;
+      selectedBlocks.forEach(b => {
+        let l = parseInt(b.style.left || 0), t = parseInt(b.style.top || 0);
+        let r = l + b.offsetWidth, bot = t + b.offsetHeight;
+        if (l < minX) minX = l;
+        if (t < minY) minY = t;
+        if (r > maxX) maxX = r;
+        if (bot > maxY) maxY = bot;
+      });
+      multiSelectionBox.style.display = 'block';
+      multiSelectionBox.style.left = minX + 'px';
+      multiSelectionBox.style.top = minY + 'px';
+      multiSelectionBox.style.width = (maxX - minX) + 'px';
+      multiSelectionBox.style.height = (maxY - minY) + 'px';
+      document.body.classList.add('multi-selection-active');
+    }
+
     function clearSelection() {
       selectedBlocks.forEach(block => { block.classList.remove('selected'); const textContent = block.querySelector('.block-text'); if (textContent) { textContent.classList.remove('editing'); textContent.contentEditable = false; } });
-      selectedBlocks.clear(); updatePropertiesUI();
+      selectedBlocks.clear(); updatePropertiesUI(); updateMultiSelectionBoundingBox();
     }
-    function addToSelection(block) { selectedBlocks.add(block); block.classList.add('selected'); updatePropertiesUI(); }
+    function addToSelection(block) { selectedBlocks.add(block); block.classList.add('selected'); updatePropertiesUI(); updateMultiSelectionBoundingBox(); }
     function removeFromSelection(block) {
-      selectedBlocks.delete(block); block.classList.remove('selected'); const textContent = block.querySelector('.block-text'); if (textContent) { textContent.classList.remove('editing'); textContent.contentEditable = false; } updatePropertiesUI();
+      selectedBlocks.delete(block); block.classList.remove('selected'); const textContent = block.querySelector('.block-text'); if (textContent) { textContent.classList.remove('editing'); textContent.contentEditable = false; } updatePropertiesUI(); updateMultiSelectionBoundingBox();
     }
 
     function updatePropertiesUI() {
@@ -238,13 +276,13 @@
 
     function updateSelectedBlock() {
       if (selectedBlocks.size !== 1) return; let block = Array.from(selectedBlocks)[0]; let newW = parseInt(propW.value), newX = parseInt(propX.value);
-      if (newW > 700) newW = 700; if (newX + newW > 700) newX = 700 - newW; if (newX < 0) newX = 0;
+      if (newW > 850) newW = 850; if (newX + newW > 850) newX = 850 - newW; if (newX < 0) newX = 0;
       block.style.width = newW + 'px'; block.style.height = propH.value + 'px'; block.style.left = newX + 'px'; block.style.top = propY.value + 'px'; updateCanvasHeight(); saveState();
     }
 
     function alignBlock(alignment) {
       if (selectedBlocks.size === 0) return;
-      selectedBlocks.forEach(block => { let w = block.offsetWidth; if (alignment === 'left') block.style.left = '0px'; else if (alignment === 'center') block.style.left = Math.round((700 - w) / 2) + 'px'; else if (alignment === 'right') block.style.left = (700 - w) + 'px'; });
+      selectedBlocks.forEach(block => { let w = block.offsetWidth; if (alignment === 'left') block.style.left = '0px'; else if (alignment === 'center') block.style.left = Math.round((850 - w) / 2) + 'px'; else if (alignment === 'right') block.style.left = (850 - w) + 'px'; });
       updatePropertiesUI(); saveState();
     }
 
@@ -266,13 +304,89 @@
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
         if(clipboard.length === 0) return; clearSelection();
         clipboard.forEach(item => {
-          let newBlock = addBlock(item.type); newBlock.style.width = item.w + 'px'; newBlock.style.height = item.h + 'px'; newBlock.style.left = Math.min(item.l + 20, 700 - item.w) + 'px'; newBlock.style.top = (item.t + 20) + 'px';
+          let newBlock = addBlock(item.type); newBlock.style.width = item.w + 'px'; newBlock.style.height = item.h + 'px'; newBlock.style.left = Math.min(item.l + 20, 850 - item.w) + 'px'; newBlock.style.top = (item.t + 20) + 'px';
           if (item.type === 'image' || item.type === 'gif') { if (item.src) { newBlock.dataset.src = item.src; newBlock.querySelector('.block-content').innerHTML = `<img src="${item.src}" style="width:100%; height:100%; object-fit:cover; pointer-events:none;">`; } } 
           else if (item.type === 'text') { let tEl = newBlock.querySelector('.block-text'); tEl.innerHTML = item.html; if (item.css) tEl.style.cssText = item.css; }
           addToSelection(newBlock);
         });
         updateCanvasHeight(); saveState();
       }
+    });
+
+    document.querySelectorAll('.multi-handle').forEach(handle => {
+      handle.addEventListener('mousedown', function(e) {
+        e.stopPropagation();
+        if (selectedBlocks.size <= 1) return;
+        let pos = handle.dataset.pos;
+        let startX = e.clientX, startY = e.clientY;
+        
+        let groupItems = [];
+        let minX = Infinity, minY = Infinity, maxX = 0, maxY = 0;
+        selectedBlocks.forEach(b => {
+          let l = parseInt(b.style.left || 0), t = parseInt(b.style.top || 0);
+          let w = b.offsetWidth, h = b.offsetHeight;
+          if (l < minX) minX = l;
+          if (t < minY) minY = t;
+          if (l + w > maxX) maxX = l + w;
+          if (t + h > maxY) maxY = t + h;
+          groupItems.push({ block: b, l, t, w, h });
+        });
+        let origGroupW = maxX - minX;
+        let origGroupH = maxY - minY;
+        if (origGroupW === 0) origGroupW = 1;
+        if (origGroupH === 0) origGroupH = 1;
+
+        function onMouseMove(moveEvent) {
+          let dx = moveEvent.clientX - startX;
+          let dy = moveEvent.clientY - startY;
+          let newGroupW = origGroupW, newGroupH = origGroupH;
+          let newGroupX = minX, newGroupY = minY;
+
+          if (pos.includes('e')) newGroupW = Math.max(40, origGroupW + dx);
+          if (pos.includes('s')) newGroupH = Math.max(40, origGroupH + dy);
+          if (pos.includes('w')) {
+            let potentialW = origGroupW - dx;
+            if (potentialW >= 40) { newGroupW = potentialW; newGroupX = minX + dx; }
+          }
+          if (pos.includes('n')) {
+            let potentialH = origGroupH - dy;
+            if (potentialH >= 40) { newGroupH = potentialH; newGroupY = minY + dy; }
+          }
+
+          let scaleX = newGroupW / origGroupW;
+          let scaleY = newGroupH / origGroupH;
+
+          groupItems.forEach(item => {
+            let relX = item.l - minX;
+            let relY = item.t - minY;
+            let relW = item.w;
+            let relH = item.h;
+
+            let finalL = Math.round(newGroupX + (relX * scaleX));
+            let finalT = Math.round(newGroupY + (relY * scaleY));
+            let finalW = Math.max(20, Math.round(relW * scaleX));
+            let finalH = Math.max(20, Math.round(relH * scaleY));
+
+            if (finalL < 0) finalL = 0;
+            if (finalL + finalW > 850) finalW = 850 - finalL;
+
+            item.block.style.left = finalL + 'px';
+            item.block.style.top = finalT + 'px';
+            item.block.style.width = finalW + 'px';
+            item.block.style.height = finalH + 'px';
+          });
+          updateMultiSelectionBoundingBox();
+        }
+
+        function onMouseUp() {
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+          updateCanvasHeight();
+          saveState();
+        }
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      });
     });
 
     canvas.addEventListener('mousedown', function(e) {
@@ -306,9 +420,9 @@
     function addBlock(type, restoreData = null) {
       const block = document.createElement('div'); block.className = 'block'; block.dataset.type = type; 
       if (restoreData) { block.style.left = restoreData.x; block.style.top = restoreData.y; block.style.width = restoreData.w; block.style.height = restoreData.h; } 
-      else { block.style.left = '0px'; block.style.top = getLowestPoint() + 'px'; block.style.width = '700px'; }
+      else { block.style.left = '0px'; block.style.top = getLowestPoint() + 'px'; block.style.width = '850px'; }
 
-      const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-btn'; deleteBtn.innerHTML = 'X'; deleteBtn.onclick = function(e) { e.stopPropagation(); removeFromSelection(block); block.remove(); updateCanvasHeight(); saveState(); }; block.appendChild(deleteBtn);
+      const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-btn'; deleteBtn.innerHTML = 'X'; deleteBtn.onclick = function(e) { e.stopPropagation(); removeFromSelection(block); block.remove(); updateCanvasHeight(); updateMultiSelectionBoundingBox(); saveState(); }; block.appendChild(deleteBtn);
 
       if (type === 'image') {
         if (!restoreData) block.style.height = '150px'; const content = document.createElement('div'); content.className = 'block-content bg-image'; content.innerHTML = 'Imagen (Clic para adjuntar)'; block.appendChild(content);
@@ -320,7 +434,6 @@
       } else if (type === 'gif') {
         if (!restoreData) block.style.height = '150px'; const content = document.createElement('div'); content.className = 'block-content bg-gif'; content.innerHTML = 'GIF (Pegar link)'; block.appendChild(content);
       } else if (type === 'spacer') {
-        // NUEVO BLOQUE: ESPACIADOR
         if (!restoreData) block.style.height = '30px'; const content = document.createElement('div'); content.className = 'block-content bg-spacer'; content.innerHTML = '<span style="color:#aaa; font-size:11px;">[Espacio Vacío]</span>'; block.appendChild(content);
       }
 
@@ -341,12 +454,12 @@
               if (pos.includes('n')) { if (Math.abs(newT - oB) < SNAP_DIST) { newH += (newT - oB); newT = oB; } else if (Math.abs(newT - oT) < SNAP_DIST) { newH += (newT - oT); newT = oT; } }
             });
             if (newW < 20) { if (pos.includes('w')) newL = startL + startW - 20; newW = 20; } if (newH < 20) { if (pos.includes('n')) newT = startT + startH - 20; newH = 20; }
-            if (newL < 0) { newW += newL; newL = 0; } if (newL + newW > 700) newW = 700 - newL; if (newT < 0) { newH += newT; newT = 0; }
+            if (newL < 0) { newW += newL; newL = 0; } if (newL + newW > 850) newW = 850 - newL; if (newT < 0) { newH += newT; newT = 0; }
             let testRect = { left: newL, top: newT, right: newL + newW, bottom: newT + newH }; let collision = false;
             for (let other of otherBlocks) { let oRect = { left: parseInt(other.style.left || 0), top: parseInt(other.style.top || 0), right: parseInt(other.style.left || 0) + other.offsetWidth, bottom: parseInt(other.style.top || 0) + other.offsetHeight }; if (checkOverlap(testRect, oRect)) { collision = true; break; } }
-            if (!collision) { block.style.width = newW + 'px'; block.style.height = newH + 'px'; block.style.left = newL + 'px'; block.style.top = newT + 'px'; updatePropertiesUI(); }
+            if (!collision) { block.style.width = newW + 'px'; block.style.height = newH + 'px'; block.style.left = newL + 'px'; block.style.top = newT + 'px'; updatePropertiesUI(); updateMultiSelectionBoundingBox(); }
           }
-          function onMouseUp() { document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); updateCanvasHeight(); saveState(); }
+          function onMouseUp() { document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); updateCanvasHeight(); updateMultiSelectionBoundingBox(); saveState(); }
           document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp);
         });
         block.appendChild(handle);
@@ -365,30 +478,31 @@
             let dx = moveEvent.clientX - startX, dy = moveEvent.clientY - startY;
             if (selectedBlocks.size === 1) {
               let single = groupData[0]; let newX = single.origLeft + dx, newY = single.origTop + dy; let otherBlocks = Array.from(document.querySelectorAll('.block')).filter(b => b !== single.element);
-              if (Math.abs(newX) < SNAP_DIST) newX = 0; if (Math.abs((newX + single.width) - 700) < SNAP_DIST) newX = 700 - single.width; if (Math.abs(newY) < SNAP_DIST) newY = 0;
+              if (Math.abs(newX) < SNAP_DIST) newX = 0; if (Math.abs((newX + single.width) - 850) < SNAP_DIST) newX = 850 - single.width; if (Math.abs(newY) < SNAP_DIST) newY = 0;
               otherBlocks.forEach(other => {
                 let oL = parseInt(other.style.left || 0), oT = parseInt(other.style.top || 0); let oR = oL + other.offsetWidth, oB = oT + other.offsetHeight;
                 if (Math.abs(newX - oR) < SNAP_DIST) newX = oR; else if (Math.abs(newX - oL) < SNAP_DIST) newX = oL; else if (Math.abs((newX + single.width) - oL) < SNAP_DIST) newX = oL - single.width; else if (Math.abs((newX + single.width) - oR) < SNAP_DIST) newX = oR - single.width;
                 if (Math.abs(newY - oB) < SNAP_DIST) newY = oB; else if (Math.abs(newY - oT) < SNAP_DIST) newY = oT; else if (Math.abs((newY + single.height) - oT) < SNAP_DIST) newY = oT - single.height; else if (Math.abs((newY + single.height) - oB) < SNAP_DIST) newY = oB - single.height;
               });
-              if (newX < 0) newX = 0; if (newX + single.width > 700) newX = 700 - single.width; if (newY < 0) newY = 0;
+              if (newX < 0) newX = 0; if (newX + single.width > 850) newX = 850 - single.width; if (newY < 0) newY = 0;
               let testRectX = { left: newX, top: single.origTop, right: newX + single.width, bottom: single.origTop + single.height }; let collisionX = false;
               for (let other of otherBlocks) { let oRect = { left: parseInt(other.style.left || 0), top: parseInt(other.style.top || 0), right: parseInt(other.style.left || 0) + other.offsetWidth, bottom: parseInt(other.style.top || 0) + other.offsetHeight }; if (checkOverlap(testRectX, oRect)) { collisionX = true; break; } }
               if (!collisionX) single.element.style.left = newX + 'px';
               let currentX = parseInt(single.element.style.left || 0); let testRectY = { left: currentX, top: newY, right: currentX + single.width, bottom: newY + single.height }; let collisionY = false;
               for (let other of otherBlocks) { let oRect = { left: parseInt(other.style.left || 0), top: parseInt(other.style.top || 0), right: parseInt(other.style.left || 0) + other.offsetWidth, bottom: parseInt(other.style.top || 0) + other.offsetHeight }; if (checkOverlap(testRectY, oRect)) { collisionY = true; break; } }
               if (!collisionY) single.element.style.top = newY + 'px';
-              updatePropertiesUI();
+              updatePropertiesUI(); updateMultiSelectionBoundingBox();
             } else {
-              groupData.forEach(item => { let newX = item.origLeft + dx, newY = item.origTop + dy; if (newX < 0) newX = 0; if (newX + item.width > 700) newX = 700 - item.width; if (newY < 0) newY = 0; item.element.style.left = newX + 'px'; item.element.style.top = newY + 'px'; });
+              groupData.forEach(item => { let newX = item.origLeft + dx, newY = item.origTop + dy; if (newX < 0) newX = 0; if (newX + item.width > 850) newX = 850 - item.width; if (newY < 0) newY = 0; item.element.style.left = newX + 'px'; item.element.style.top = newY + 'px'; });
+              updateMultiSelectionBoundingBox();
             }
           }
-          function onMouseUp() { document.body.style.userSelect = 'auto'; selectedBlocks.forEach(b => b.classList.remove('dragging')); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); updateCanvasHeight(); saveState(); }
+          function onMouseUp() { document.body.style.userSelect = 'auto'; selectedBlocks.forEach(b => b.classList.remove('dragging')); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); updateCanvasHeight(); updateMultiSelectionBoundingBox(); saveState(); }
           document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp);
         }
       });
       canvas.appendChild(block); 
-      if(!restoreData) { clearSelection(); addToSelection(block); updateCanvasHeight(); saveState(); }
+      if(!restoreData) { clearSelection(); addToSelection(block); updateCanvasHeight(); updateMultiSelectionBoundingBox(); saveState(); }
       return block; 
     }
 
@@ -413,35 +527,38 @@
       if (currentRow) rows.push(currentRow);
 
       let attachments = [];
-      let htmlTable = `<table width="700" cellpadding="0" cellspacing="0" border="0" align="center" style="background-color:#ffffff; width:700px; max-width:700px; margin: 0 auto; border-collapse: collapse;">`;
+      let htmlTable = `<table width="850" cellpadding="0" cellspacing="0" border="0" align="center" style="background-color:#ffffff; width:850px; max-width:850px; margin: 0 auto; border-collapse: collapse;">`;
       let currentY = 0;
 
       rows.forEach(row => {
         if (row.top > currentY) { let gap = row.top - currentY; htmlTable += `<tr><td height="${gap}" style="font-size:1px; line-height:1px;">&nbsp;</td></tr>`; }
-        htmlTable += `<tr><td><table width="700" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;"><tr>`;
+        htmlTable += `<tr><td><table width="850" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;"><tr>`;
         row.blocks.sort((a, b) => a.x - b.x); let currentX = 0;
         
         row.blocks.forEach(b => {
           if (b.x > currentX) { let gap = b.x - currentX; htmlTable += `<td width="${gap}" style="font-size:1px; line-height:1px;">&nbsp;</td>`; }
-          htmlTable += `<td width="${b.w}" height="${b.h}" valign="top" style="width:${b.w}px; height:${b.h}px; padding:0; margin:0; overflow:hidden;">`;
+          // REESCALADO FORZADO: max-width, width exacta y altura fija para evitar desbordes por DPIs altos
+          htmlTable += `<td width="${b.w}" height="${b.h}" valign="top" style="width:${b.w}px; height:${b.h}px; max-width:${b.w}px; padding:0; margin:0; overflow:hidden;">`;
           
           if (b.type === 'image' || b.type === 'gif') {
             if (b.src && b.src.startsWith('data:image')) {
                 let cid = 'img_' + attachments.length + '@newsletter'; let mimeType = b.src.split(';')[0].split(':')[1]; let base64Data = b.src.split(',')[1]; attachments.push({ cid, mimeType, base64Data });
-                htmlTable += `<img src="cid:${cid}" width="${b.w}" height="${b.h}" style="display:block; width:${b.w}px; height:${b.h}px; border:0; outline:none; text-decoration:none;" />`;
-            } else if (b.src) { htmlTable += `<img src="${b.src}" width="${b.w}" height="${b.h}" style="display:block; width:${b.w}px; height:${b.h}px; border:0; outline:none; text-decoration:none;" />`; } 
-            else { htmlTable += `<div style="width:${b.w}px; height:${b.h}px; background:#e0e0e0;"></div>`; }
+                htmlTable += `<img src="cid:${cid}" width="${b.w}" height="${b.h}" style="display:block; width:${b.w}px; height:${b.h}px; max-width:${b.w}px; border:0; outline:none; text-decoration:none; object-fit:cover;" />`;
+            } else if (b.src) { 
+                htmlTable += `<img src="${b.src}" width="${b.w}" height="${b.h}" style="display:block; width:${b.w}px; height:${b.h}px; max-width:${b.w}px; border:0; outline:none; text-decoration:none; object-fit:cover;" />`; 
+            } else { 
+                htmlTable += `<div style="width:${b.w}px; height:${b.h}px; background:#e0e0e0;"></div>`; 
+            }
           } else if (b.type === 'text') {
-            htmlTable += `<div style="${b.css}; padding:15px; box-sizing:border-box; margin:0;">${b.html}</div>`;
+            htmlTable += `<div style="${b.css}; padding:15px; box-sizing:border-box; margin:0; max-width:${b.w}px;">${b.html}</div>`;
           } else if (b.type === 'spacer') {
-            // EL ESPACIADOR SE EXPORTA COMO UN HUECO TRANSPARENTE EXACTO
             htmlTable += `<div style="width:${b.w}px; height:${b.h}px; font-size:1px; line-height:1px; background-color:transparent;">&nbsp;</div>`;
           }
           
           htmlTable += `</td>`; currentX = b.x + b.w;
         });
 
-        if (currentX < 700) { htmlTable += `<td width="${700 - currentX}" style="font-size:1px; line-height:1px;">&nbsp;</td>`; }
+        if (currentX < 850) { htmlTable += `<td width="${850 - currentX}" style="font-size:1px; line-height:1px;">&nbsp;</td>`; }
         htmlTable += `</tr></table></td></tr>`; currentY = row.bottom;
       });
 
