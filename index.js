@@ -1,5 +1,6 @@
 const { app, BrowserWindow, dialog } = require('electron');
 const { autoUpdater } = require('electron-updater');
+const path = require('path');
 
 let mainWindow;
 
@@ -7,6 +8,7 @@ function createWindow () {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    icon: path.join(__dirname, 'icon.ico'), // Acá le inyectamos tu icono a la ventana
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -27,7 +29,7 @@ autoUpdater.on('update-available', () => {
   dialog.showMessageBox(mainWindow, {
     type: 'info',
     title: 'Actualización disponible',
-    message: 'Hay una nueva versión de BlockMail Editor. Se está descargando en segundo plano...',
+    message: 'Hay una nueva versión de BlackMail Editor. Se está descargando en segundo plano...',
     buttons: ['Entendido']
   });
 });
@@ -40,7 +42,6 @@ autoUpdater.on('update-downloaded', () => {
     message: 'La nueva versión ya se descargó. ¿Querés reiniciar la aplicación ahora para instalarla?',
     buttons: ['Reiniciar y Actualizar', 'Más tarde']
   }).then((result) => {
-    // Si el usuario hace clic en el botón 0 ("Reiniciar y Actualizar")
     if (result.response === 0) {
       autoUpdater.quitAndInstall();
     }
