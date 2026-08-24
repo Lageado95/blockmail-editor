@@ -4,17 +4,24 @@
   <meta charset="UTF-8">
   <title>BlackMail Editor</title>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; background-color: #2b2b2b; color: #fff; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; background-color: #2b2b2b; color: #fff; }
+    
+    /* NUEVA BARRA SUPERIOR */
+    #topbar { display: flex; align-items: center; justify-content: space-between; background-color: #1e1e1e; padding: 10px 20px; border-bottom: 1px solid #444; z-index: 10001; }
+    #main-area { display: flex; flex: 1; overflow: hidden; }
+    
     #canvas-container { flex: 1; display: flex; justify-content: center; padding: 40px; overflow-y: auto; position: relative; }
     #newsletter-canvas { width: 850px; min-height: 800px; background-color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative; }
     #selection-box { position: absolute; border: 1px solid #0d99ff; background-color: rgba(13, 153, 255, 0.2); display: none; pointer-events: none; z-index: 9999; }
-    #sidebar { width: 300px; background-color: #1e1e1e; border-left: 1px solid #444; padding: 20px; display: flex; flex-direction: column; overflow-y: auto; z-index: 10000; }
-    h2 { font-size: 16px; margin-top: 0; margin-bottom: 20px; color: #ccc; }
+    #sidebar { width: 320px; background-color: #1e1e1e; border-left: 1px solid #444; padding: 20px; display: flex; flex-direction: column; overflow-y: auto; z-index: 10000; }
+    
+    h2 { font-size: 16px; margin-top: 0; margin-bottom: 15px; color: #ccc; }
     .tool-btn { background-color: #333; color: #fff; border: 1px solid #555; padding: 12px; margin-bottom: 10px; border-radius: 6px; cursor: pointer; text-align: left; font-size: 14px; }
     .tool-btn:hover { background-color: #444; }
     #properties-panel { background-color: #2a2a2a; padding: 15px; border-radius: 6px; margin-top: 20px; display: none; }
     #multi-select-msg { display: none; color: #0d99ff; font-size: 13px; text-align: center; margin-bottom: 10px; background: rgba(13, 153, 255, 0.1); padding: 8px; border-radius: 4px; }
     #single-properties { display: block; }
+    
     .align-group { display: flex; gap: 5px; margin-bottom: 15px; }
     .align-btn { flex: 1; text-align: center; padding: 8px 0; margin-bottom: 0; font-size: 16px; font-weight: bold; background-color: #111; border-color: #444; }
     .align-btn:hover { background-color: #333; border-color: #0d99ff; }
@@ -25,6 +32,7 @@
     .media-input { width: 100%; box-sizing: border-box; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; margin-top: 5px; }
     .text-prop-box { display:flex; align-items:center; background:#111; border:1px solid #444; border-radius:4px; padding:0 5px; height: 32px; }
     .text-prop-box input { width:100%; border:none; background:transparent; color:white; outline:none; text-align:right; font-size: 13px;}
+    
     .block { position: absolute; background-color: #fff; box-sizing: border-box; min-width: 50px; min-height: 50px; cursor: grab; transition: box-shadow 0.2s, transform 0.2s; }
     .block.dragging { cursor: grabbing; z-index: 8000 !important; opacity: 0.85; box-shadow: 0 15px 30px rgba(0,0,0,0.4); transform: scale(1.02); }
     .block.selected { border: 1.5px solid #0d99ff; z-index: 50; }
@@ -45,129 +53,133 @@
     body.multi-selection-active .multi-handle { display: block; }
     .mh-nw { top: -6px; left: -6px; cursor: nwse-resize; } .mh-ne { top: -6px; right: -6px; cursor: nesw-resize; }
     .mh-sw { bottom: -6px; left: -6px; cursor: nesw-resize; } .mh-se { bottom: -6px; right: -6px; cursor: nwse-resize; }
-
     .nw { top: -5px; left: -5px; cursor: nwse-resize; } .n { top: -5px; left: calc(50% - 4px); cursor: ns-resize; } .ne { top: -5px; right: -5px; cursor: nesw-resize; } .e { top: calc(50% - 4px); right: -5px; cursor: ew-resize; }
     .se { bottom: -5px; right: -5px; cursor: nwse-resize; } .s { bottom: -5px; left: calc(50% - 4px); cursor: ns-resize; } .sw { bottom: -5px; left: -5px; cursor: nesw-resize; } .w { top: calc(50% - 4px); left: -5px; cursor: ew-resize; }
   </style>
 </head>
 <body>
-  <div id="canvas-container">
-    <div id="newsletter-canvas">
-      <div id="selection-box"></div>
-      <div id="multi-selection-box">
-        <div class="multi-handle mh-nw" data-pos="nw"></div>
-        <div class="multi-handle mh-ne" data-pos="ne"></div>
-        <div class="multi-handle mh-sw" data-pos="sw"></div>
-        <div class="multi-handle mh-se" data-pos="se"></div>
-      </div>
+
+  <!-- BARRA SUPERIOR -->
+  <div id="topbar">
+    <div style="display:flex; align-items:center; gap: 15px;">
+      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlackMail Editor</span>
+      <label style="font-size: 13px; color: #0d99ff; font-weight: bold;">✉️ Asunto:</label>
+      <input type="text" id="email-subject" placeholder="Ej: ¡Llegaron las ofertas!" style="width: 300px; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; outline:none;">
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button class="tool-btn" onclick="saveProject()" style="margin:0; padding:8px 15px; background-color: #0d99ff; border-color: #007acc; font-weight:bold;">💾 Guardar</button>
+      <button class="tool-btn" onclick="triggerLoadProject()" style="margin:0; padding:8px 15px; background-color: #f39c12; border-color: #d68910; font-weight:bold;">📂 Abrir</button>
+      <button class="tool-btn" onclick="exportEML()" style="margin:0; padding:8px 15px; background-color: #1FAF38; border-color: #158a29; font-weight:bold;">📥 Exportar a .EML</button>
+      <input type="file" id="project-upload" accept=".bmail" style="display:none;" onchange="handleProjectUpload(event)">
     </div>
   </div>
 
-  <div id="sidebar">
-    <div style="background-color: #2a2a2a; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-      <label style="font-size: 13px; color: #0d99ff; font-weight: bold; display:block; margin-bottom:5px;">✉️ Asunto del Correo</label>
-      <input type="text" id="email-subject" class="media-input" placeholder="Ej: ¡Llegaron las ofertas!" style="margin-top:0;">
-    </div>
-
-    <h2>Herramientas</h2>
-    <button class="tool-btn" onclick="addBlock('image')">🖼️ Agregar Imagen</button>
-    <button class="tool-btn" onclick="addBlock('text')">T Agregar Texto</button>
-    <button class="tool-btn" onclick="addBlock('gif')">🎬 Agregar GIF</button>
-    <button class="tool-btn" onclick="addBlock('spacer')">⬜ Tabla Vacía (Espacio)</button>
-    
-    <div id="properties-panel">
-      <h2 style="margin-bottom: 10px; color: #0d99ff;">Propiedades</h2>
-      <div id="multi-select-msg">Varios bloques seleccionados.<br><small>Arrastrá desde las esquinas para cambiar el tamaño en conjunto.</small></div>
-      
-      <div id="single-properties">
-        <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px;">Alinear caja con el lienzo</label>
-        <div class="align-group">
-          <button class="tool-btn align-btn" onclick="alignBlock('left')" title="Izquierda">|◀</button>
-          <button class="tool-btn align-btn" onclick="alignBlock('center')" title="Centro">▶◀</button>
-          <button class="tool-btn align-btn" onclick="alignBlock('right')" title="Derecha">▶|</button>
+  <div id="main-area">
+    <div id="canvas-container">
+      <div id="newsletter-canvas">
+        <div id="selection-box"></div>
+        <div id="multi-selection-box">
+          <div class="multi-handle mh-nw" data-pos="nw"></div>
+          <div class="multi-handle mh-ne" data-pos="ne"></div>
+          <div class="multi-handle mh-sw" data-pos="sw"></div>
+          <div class="multi-handle mh-se" data-pos="se"></div>
         </div>
-        
-        <div class="prop-row"><label>Pos. X</label><input type="number" id="prop-x" onchange="updateSelectedBlock()"></div>
-        <div class="prop-row"><label>Pos. Y</label><input type="number" id="prop-y" onchange="updateSelectedBlock()"></div>
-        <div class="prop-row"><label>Ancho</label><input type="number" id="prop-w" onchange="updateSelectedBlock()"></div>
-        <div class="prop-row"><label>Alto</label><input type="number" id="prop-h" onchange="updateSelectedBlock()"></div>
-        
-        <div id="media-properties">
-          <div id="image-props" style="display:none;">
-             <label style="font-size: 12px; color: #aaa;">Archivo local (Se adjunta al mail)</label>
-             <input type="file" id="image-upload" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
-             <button class="tool-btn" onclick="document.getElementById('image-upload').click()" style="width:100%; background:#1FAF38; text-align:center; margin-top:5px;">Adjuntar Imagen</button>
-          </div>
-          <div id="gif-props" style="display:none;">
-             <label style="font-size: 12px; color: #aaa;">Pegá acá el Embed o Link de Giphy</label>
-             <input type="text" id="gif-url" class="media-input" placeholder="Pegar código..." onchange="handleGifURL(event)">
-          </div>
-        </div>
-        
-        <div id="text-props">
-          <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px;">Carácter</label>
-          <select id="prop-font-family" class="media-input" style="margin-top:0;" onchange="updateTextProperties()">
-            <option value="Arial, sans-serif">Arial</option>
-            <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
-            <option value="'Times New Roman', Times, serif">Times New Roman</option>
-            <option value="Georgia, serif">Georgia</option>
-            <option value="'Courier New', Courier, monospace">Courier New</option>
-            <option value="Verdana, sans-serif">Verdana</option>
-          </select>
-          
-          <div style="display:flex; justify-content:space-between; margin-top:5px;">
-            <select id="prop-font-weight" class="media-input" style="width:65%; margin-top:0;" onchange="updateTextProperties()">
-              <option value="normal">Regular</option>
-              <option value="bold">Bold</option>
-              <option value="italic">Italic</option>
-            </select>
-            <input type="color" id="prop-text-color" title="Color de texto" style="width:30%; height:33px; margin-top:0; background:none; border:1px solid #444; border-radius:4px; cursor:pointer;" onchange="updateTextProperties()">
-          </div>
-
-          <div style="display:flex; justify-content:space-between; margin-top:10px;">
-            <div class="text-prop-box" style="width:48%;" title="Tamaño de fuente (px)">
-              <span style="font-size:14px; color:#aaa; font-weight:bold; margin-right:5px;">T</span>
-              <input type="number" id="prop-font-size" onchange="updateTextProperties()">
-              <span style="font-size:10px; color:#666; margin-left:3px;">px</span>
-            </div>
-            <div class="text-prop-box" style="width:48%;" title="Interlineado (px)">
-              <span style="font-size:14px; color:#aaa; font-weight:bold; margin-right:5px;">↕</span>
-              <input type="number" id="prop-line-height" onchange="updateTextProperties()">
-              <span style="font-size:10px; color:#666; margin-left:3px;">px</span>
-            </div>
-          </div>
-          
-          <div style="display:flex; justify-content:space-between; margin-top:5px;">
-            <div class="text-prop-box" style="width:48%;" title="Espaciado de letras / Tracking (px)">
-              <span style="font-size:12px; color:#aaa; font-weight:bold; margin-right:5px;">VA</span>
-              <input type="number" id="prop-letter-spacing" onchange="updateTextProperties()">
-              <span style="font-size:10px; color:#666; margin-left:3px;">px</span>
-            </div>
-          </div>
-
-          <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px; margin-top:15px;">Párrafo</label>
-          <div class="align-group">
-            <button class="tool-btn align-btn" onclick="updateTextAlign('left')" title="Alinear a la Izquierda" style="font-size:16px;">⫷</button>
-            <button class="tool-btn align-btn" onclick="updateTextAlign('center')" title="Centrar" style="font-size:16px;">≡</button>
-            <button class="tool-btn align-btn" onclick="updateTextAlign('right')" title="Alinear a la Derecha" style="font-size:16px;">⫸</button>
-            <button class="tool-btn align-btn" onclick="updateTextAlign('justify')" title="Justificar" style="font-size:16px;">▤</button>
-          </div>
-        </div>
-
       </div>
     </div>
 
-    <!-- SECCIÓN NUEVA DE GUARDAR Y ABRIR PROYECTOS -->
-    <h2 style="margin-top: 30px;">Proyecto</h2>
-    <div style="display:flex; gap:10px;">
-      <button class="tool-btn" onclick="saveProject()" style="flex:1; background-color: #0d99ff; border-color: #007acc; text-align: center; font-weight:bold;">💾 Guardar</button>
-      <button class="tool-btn" onclick="triggerLoadProject()" style="flex:1; background-color: #f39c12; border-color: #d68910; text-align: center; font-weight:bold;">📂 Abrir</button>
-      <input type="file" id="project-upload" accept=".bmail" style="display:none;" onchange="handleProjectUpload(event)">
-    </div>
+    <div id="sidebar">
+      <h2>Bloques</h2>
+      <button class="tool-btn" onclick="addBlock('image')">🖼️ Agregar Imagen</button>
+      <button class="tool-btn" onclick="addBlock('text')">T Agregar Texto</button>
+      <button class="tool-btn" onclick="addBlock('gif')">🎬 Agregar GIF</button>
+      <button class="tool-btn" onclick="addBlock('spacer')">⬜ Tabla Vacía (Espacio)</button>
+      
+      <div id="properties-panel">
+        <h2 style="margin-bottom: 10px; color: #0d99ff;">Propiedades</h2>
+        <div id="multi-select-msg">Varios bloques seleccionados.<br><small>Arrastrá desde las esquinas para cambiar el tamaño en conjunto.</small></div>
+        
+        <div id="single-properties">
+          <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px;">Alinear caja con el lienzo</label>
+          <div class="align-group">
+            <button class="tool-btn align-btn" onclick="alignBlock('left')" title="Izquierda">|◀</button>
+            <button class="tool-btn align-btn" onclick="alignBlock('center')" title="Centro">▶◀</button>
+            <button class="tool-btn align-btn" onclick="alignBlock('right')" title="Derecha">▶|</button>
+          </div>
+          
+          <div class="prop-row"><label>Pos. X</label><input type="number" id="prop-x" onchange="updateSelectedBlock()"></div>
+          <div class="prop-row"><label>Pos. Y</label><input type="number" id="prop-y" onchange="updateSelectedBlock()"></div>
+          <div class="prop-row"><label>Ancho</label><input type="number" id="prop-w" onchange="updateSelectedBlock()"></div>
+          <div class="prop-row"><label>Alto</label><input type="number" id="prop-h" onchange="updateSelectedBlock()"></div>
+          
+          <div id="media-properties">
+            <div id="image-props" style="display:none;">
+               <label style="font-size: 12px; color: #aaa;">Archivo local (Se adjunta al mail)</label>
+               <input type="file" id="image-upload" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
+               <button class="tool-btn" onclick="document.getElementById('image-upload').click()" style="width:100%; background:#1FAF38; text-align:center; margin-top:5px;">Adjuntar Imagen</button>
+            </div>
+            <div id="gif-props" style="display:none;">
+               <label style="font-size: 12px; color: #aaa;">Pegá acá el Embed o Link de Giphy</label>
+               <input type="text" id="gif-url" class="media-input" placeholder="Pegar código..." onchange="handleGifURL(event)">
+            </div>
+            <!-- Nuevo Vínculo a Imágenes -->
+            <div style="margin-top:15px; border-top:1px solid #444; padding-top:15px;">
+              <label style="font-size: 12px; color: #aaa;">Vínculo (URL) al hacer clic</label>
+              <input type="text" id="prop-href" class="media-input" placeholder="https://..." onchange="updateMediaLink()">
+            </div>
+          </div>
+          
+          <div id="text-props">
+            <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px;">Todo el Cuadro</label>
+            <select id="prop-font-family" class="media-input" style="margin-top:0;" onchange="updateTextProperties()">
+              <option value="Arial, sans-serif">Arial</option>
+              <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
+              <option value="'Times New Roman', Times, serif">Times New Roman</option>
+              <option value="Georgia, serif">Georgia</option>
+              <option value="'Courier New', Courier, monospace">Courier New</option>
+              <option value="Verdana, sans-serif">Verdana</option>
+            </select>
+            
+            <div style="display:flex; justify-content:space-between; margin-top:5px;">
+              <select id="prop-font-weight" class="media-input" style="width:65%; margin-top:0;" onchange="updateTextProperties()">
+                <option value="normal">Regular</option>
+                <option value="bold">Bold</option>
+                <option value="italic">Italic</option>
+              </select>
+              <input type="color" id="prop-text-color" title="Color de todo el cuadro" style="width:30%; height:33px; margin-top:0; background:none; border:1px solid #444; border-radius:4px; cursor:pointer;" onchange="updateTextProperties()">
+            </div>
 
-    <h2 style="margin-top: 30px;">Exportar</h2>
-    <button class="tool-btn" onclick="exportEML()" style="background-color: #1FAF38; border-color: #158a29; text-align: center; font-weight:bold;">📥 Exportar a .EML</button>
-    <div style="font-size:10px; color:#666; text-align:center; margin-top:10px;">BlackMail Editor v0.1.5</div>
+            <div style="display:flex; justify-content:space-between; margin-top:10px;">
+              <div class="text-prop-box" style="width:48%;" title="Tamaño de fuente (px)">
+                <span style="font-size:14px; color:#aaa; font-weight:bold; margin-right:5px;">T</span>
+                <input type="number" id="prop-font-size" onchange="updateTextProperties()">
+                <span style="font-size:10px; color:#666; margin-left:3px;">px</span>
+              </div>
+              <div class="text-prop-box" style="width:48%;" title="Interlineado (px)">
+                <span style="font-size:14px; color:#aaa; font-weight:bold; margin-right:5px;">↕</span>
+                <input type="number" id="prop-line-height" onchange="updateTextProperties()">
+                <span style="font-size:10px; color:#666; margin-left:3px;">px</span>
+              </div>
+            </div>
+            
+            <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px; margin-top:15px;">Solo Selección (Texto resaltado)</label>
+            <div class="align-group">
+              <button class="tool-btn align-btn" onmousedown="event.preventDefault(); inlineFormat('bold')" title="Negrita"><b>B</b></button>
+              <button class="tool-btn align-btn" onmousedown="event.preventDefault(); inlineFormat('italic')" title="Cursiva"><i>I</i></button>
+              <button class="tool-btn align-btn" onmousedown="event.preventDefault(); inlineFormat('underline')" title="Subrayado"><u>U</u></button>
+              <input type="color" id="inline-color" title="Color Selección" style="width:25%; height:33px; margin-top:0; background:none; border:1px solid #444; border-radius:4px; cursor:pointer;" oninput="inlineFormat('foreColor', this.value)" onchange="inlineFormat('foreColor', this.value); saveState();">
+            </div>
+
+            <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px; margin-top:15px;">Alineación</label>
+            <div class="align-group">
+              <button class="tool-btn align-btn" onclick="updateTextAlign('left')" title="Alinear a la Izquierda" style="font-size:16px;">⫷</button>
+              <button class="tool-btn align-btn" onclick="updateTextAlign('center')" title="Centrar" style="font-size:16px;">≡</button>
+              <button class="tool-btn align-btn" onclick="updateTextAlign('right')" title="Alinear a la Derecha" style="font-size:16px;">⫸</button>
+              <button class="tool-btn align-btn" onclick="updateTextAlign('justify')" title="Justificar" style="font-size:16px;">▤</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -182,6 +194,7 @@
     const mediaProperties = document.getElementById('media-properties');
     const imageProps = document.getElementById('image-props'), gifProps = document.getElementById('gif-props');
     const gifUrlInput = document.getElementById('gif-url');
+    const propHref = document.getElementById('prop-href');
     const subjectInput = document.getElementById('email-subject');
     
     const textProps = document.getElementById('text-props');
@@ -190,20 +203,54 @@
     const propTextColor = document.getElementById('prop-text-color');
     const propFontSize = document.getElementById('prop-font-size');
     const propLineHeight = document.getElementById('prop-line-height');
-    const propLetterSpacing = document.getElementById('prop-letter-spacing');
     
     let selectedBlocks = new Set(); let clipboard = []; const SNAP_DIST = 10; 
     let historyArr = []; let historyIndex = -1; let isRestoring = false;
+    let savedRange = null;
 
+    // Guardar selección para estilos inline
+    document.addEventListener('selectionchange', () => {
+      const active = document.activeElement;
+      if (active && active.classList.contains('editing')) {
+        const sel = window.getSelection();
+        if (sel.rangeCount > 0) savedRange = sel.getRangeAt(0);
+      }
+    });
+
+    function inlineFormat(command, value = null) {
+      const active = document.activeElement;
+      if (!active || !active.classList.contains('editing')) {
+         if (savedRange && selectedBlocks.size === 1) {
+            let block = Array.from(selectedBlocks)[0];
+            let textEl = block.querySelector('.block-text');
+            if (textEl && textEl.contains(savedRange.commonAncestorContainer)) {
+               const sel = window.getSelection();
+               sel.removeAllRanges();
+               sel.addRange(savedRange);
+            }
+         }
+      }
+      document.execCommand(command, false, value);
+      saveState();
+    }
+
+    // --- CORRECCIÓN DEL HISTORIAL (20 ACCIONES Y RESTAURACIÓN) ---
     function saveState() {
       if (isRestoring) return;
       historyArr = historyArr.slice(0, historyIndex + 1);
       let currentState = Array.from(document.querySelectorAll('.block')).map(b => ({
         type: b.dataset.type, x: b.style.left, y: b.style.top, w: b.style.width, h: b.style.height,
-        src: b.dataset.src || '', html: b.querySelector('.block-text') ? b.querySelector('.block-text').innerHTML : '',
-        css: b.querySelector('.block-text') ? b.querySelector('.block-text').style.cssText : '', selected: b.classList.contains('selected')
+        src: b.dataset.src || '', href: b.dataset.href || '',
+        html: b.querySelector('.block-text') ? b.querySelector('.block-text').innerHTML : '',
+        css: b.querySelector('.block-text') ? b.querySelector('.block-text').style.cssText : '', 
+        selected: b.classList.contains('selected')
       }));
-      historyArr.push(currentState); historyIndex++;
+      historyArr.push(currentState);
+      if (historyArr.length > 20) {
+        historyArr.shift(); // Tope de 20 movimientos
+      } else {
+        historyIndex++;
+      }
     }
 
     function undo() { if (historyIndex > 0) { historyIndex--; loadState(historyArr[historyIndex]); } }
@@ -271,11 +318,12 @@
         if (type === 'image' || type === 'gif') {
           mediaProperties.style.display = 'block'; textProps.style.display = 'none'; imageProps.style.display = (type === 'image') ? 'block' : 'none'; gifProps.style.display = (type === 'gif') ? 'block' : 'none';
           if (type === 'gif') gifUrlInput.value = block.dataset.src || '';
+          propHref.value = block.dataset.href || ''; // Carga vínculo de imagen
         } else if (type === 'text') {
           mediaProperties.style.display = 'none'; textProps.style.display = 'block'; let tEl = block.querySelector('.block-text');
           propFontFamily.value = tEl.style.fontFamily.replace(/"/g, '') || 'Arial, sans-serif';
           if (tEl.style.fontWeight === 'bold' || tEl.style.fontWeight === '700') propFontWeight.value = 'bold'; else if (tEl.style.fontStyle === 'italic') propFontWeight.value = 'italic'; else propFontWeight.value = 'normal';
-          propFontSize.value = parseInt(tEl.style.fontSize) || 14; propLineHeight.value = parseInt(tEl.style.lineHeight) || 20; propLetterSpacing.value = parseInt(tEl.style.letterSpacing) || 0; propTextColor.value = rgbToHex(tEl.style.color);
+          propFontSize.value = parseInt(tEl.style.fontSize) || 14; propLineHeight.value = parseInt(tEl.style.lineHeight) || 20; propTextColor.value = rgbToHex(tEl.style.color);
         } else if (type === 'spacer') {
           mediaProperties.style.display = 'none'; textProps.style.display = 'none';
         }
@@ -288,6 +336,13 @@
       block.style.width = newW + 'px'; block.style.height = propH.value + 'px'; block.style.left = newX + 'px'; block.style.top = propY.value + 'px'; updateCanvasHeight(); saveState();
     }
 
+    function updateMediaLink() {
+      if (selectedBlocks.size !== 1) return;
+      let block = Array.from(selectedBlocks)[0];
+      block.dataset.href = propHref.value.trim();
+      saveState();
+    }
+
     function alignBlock(alignment) {
       if (selectedBlocks.size === 0) return;
       selectedBlocks.forEach(block => { let w = block.offsetWidth; if (alignment === 'left') block.style.left = '0px'; else if (alignment === 'center') block.style.left = Math.round((850 - w) / 2) + 'px'; else if (alignment === 'right') block.style.left = (850 - w) + 'px'; });
@@ -296,7 +351,7 @@
 
     function updateTextProperties() {
       if (selectedBlocks.size !== 1) return; let block = Array.from(selectedBlocks)[0]; if (block.dataset.type !== 'text') return; let tEl = block.querySelector('.block-text');
-      tEl.style.fontFamily = propFontFamily.value; tEl.style.fontSize = propFontSize.value + 'px'; tEl.style.lineHeight = propLineHeight.value + 'px'; tEl.style.letterSpacing = propLetterSpacing.value + 'px'; tEl.style.color = propTextColor.value;
+      tEl.style.fontFamily = propFontFamily.value; tEl.style.fontSize = propFontSize.value + 'px'; tEl.style.lineHeight = propLineHeight.value + 'px'; tEl.style.color = propTextColor.value;
       if (propFontWeight.value === 'bold') { tEl.style.fontWeight = 'bold'; tEl.style.fontStyle = 'normal'; } else if (propFontWeight.value === 'italic') { tEl.style.fontWeight = 'normal'; tEl.style.fontStyle = 'italic'; } else { tEl.style.fontWeight = 'normal'; tEl.style.fontStyle = 'normal'; }
       saveState();
     }
@@ -308,12 +363,12 @@
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { if (e.shiftKey) redo(); else undo(); e.preventDefault(); return; }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { redo(); e.preventDefault(); return; }
       if (e.key === 'Delete' || e.key === 'Backspace') { if(selectedBlocks.size > 0) { selectedBlocks.forEach(block => block.remove()); selectedBlocks.clear(); updatePropertiesUI(); updateCanvasHeight(); saveState(); } }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') { clipboard = []; selectedBlocks.forEach(b => { let tEl = b.querySelector('.block-text'); clipboard.push({ type: b.dataset.type, w: b.offsetWidth, h: b.offsetHeight, l: parseInt(b.style.left || 0), t: parseInt(b.style.top || 0), src: b.dataset.src || '', html: tEl ? tEl.innerHTML : '', css: tEl ? tEl.style.cssText : '' }); }); }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') { clipboard = []; selectedBlocks.forEach(b => { let tEl = b.querySelector('.block-text'); clipboard.push({ type: b.dataset.type, w: b.offsetWidth, h: b.offsetHeight, l: parseInt(b.style.left || 0), t: parseInt(b.style.top || 0), src: b.dataset.src || '', href: b.dataset.href || '', html: tEl ? tEl.innerHTML : '', css: tEl ? tEl.style.cssText : '' }); }); }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
         if(clipboard.length === 0) return; clearSelection();
         clipboard.forEach(item => {
           let newBlock = addBlock(item.type); newBlock.style.width = item.w + 'px'; newBlock.style.height = item.h + 'px'; newBlock.style.left = Math.min(item.l + 20, 850 - item.w) + 'px'; newBlock.style.top = (item.t + 20) + 'px';
-          if (item.type === 'image' || item.type === 'gif') { if (item.src) { newBlock.dataset.src = item.src; newBlock.querySelector('.block-content').innerHTML = `<img src="${item.src}" style="width:100%; height:100%; object-fit:cover; pointer-events:none;">`; } } 
+          if (item.type === 'image' || item.type === 'gif') { if(item.href) newBlock.dataset.href = item.href; if (item.src) { newBlock.dataset.src = item.src; newBlock.querySelector('.block-content').innerHTML = `<img src="${item.src}" style="width:100%; height:100%; object-fit:cover; pointer-events:none;">`; } } 
           else if (item.type === 'text') { let tEl = newBlock.querySelector('.block-text'); tEl.innerHTML = item.html; if (item.css) tEl.style.cssText = item.css; }
           addToSelection(newBlock);
         });
@@ -325,75 +380,33 @@
       handle.addEventListener('mousedown', function(e) {
         e.stopPropagation();
         if (selectedBlocks.size <= 1) return;
-        let pos = handle.dataset.pos;
-        let startX = e.clientX, startY = e.clientY;
-        
-        let groupItems = [];
-        let minX = Infinity, minY = Infinity, maxX = 0, maxY = 0;
+        let pos = handle.dataset.pos; let startX = e.clientX, startY = e.clientY;
+        let groupItems = []; let minX = Infinity, minY = Infinity, maxX = 0, maxY = 0;
         selectedBlocks.forEach(b => {
-          let l = parseInt(b.style.left || 0), t = parseInt(b.style.top || 0);
-          let w = b.offsetWidth, h = b.offsetHeight;
-          if (l < minX) minX = l;
-          if (t < minY) minY = t;
-          if (l + w > maxX) maxX = l + w;
-          if (t + h > maxY) maxY = t + h;
-          groupItems.push({ block: b, l, t, w, h });
+          let l = parseInt(b.style.left || 0), t = parseInt(b.style.top || 0); let w = b.offsetWidth, h = b.offsetHeight;
+          if (l < minX) minX = l; if (t < minY) minY = t; if (l + w > maxX) maxX = l + w; if (t + h > maxY) maxY = t + h; groupItems.push({ block: b, l, t, w, h });
         });
-        let origGroupW = maxX - minX;
-        let origGroupH = maxY - minY;
-        if (origGroupW === 0) origGroupW = 1;
-        if (origGroupH === 0) origGroupH = 1;
+        let origGroupW = maxX - minX; let origGroupH = maxY - minY; if (origGroupW === 0) origGroupW = 1; if (origGroupH === 0) origGroupH = 1;
 
         function onMouseMove(moveEvent) {
-          let dx = moveEvent.clientX - startX;
-          let dy = moveEvent.clientY - startY;
-          let newGroupW = origGroupW, newGroupH = origGroupH;
-          let newGroupX = minX, newGroupY = minY;
-
+          let dx = moveEvent.clientX - startX; let dy = moveEvent.clientY - startY;
+          let newGroupW = origGroupW, newGroupH = origGroupH; let newGroupX = minX, newGroupY = minY;
           if (pos.includes('e')) newGroupW = Math.max(40, origGroupW + dx);
           if (pos.includes('s')) newGroupH = Math.max(40, origGroupH + dy);
-          if (pos.includes('w')) {
-            let potentialW = origGroupW - dx;
-            if (potentialW >= 40) { newGroupW = potentialW; newGroupX = minX + dx; }
-          }
-          if (pos.includes('n')) {
-            let potentialH = origGroupH - dy;
-            if (potentialH >= 40) { newGroupH = potentialH; newGroupY = minY + dy; }
-          }
-
-          let scaleX = newGroupW / origGroupW;
-          let scaleY = newGroupH / origGroupH;
-
+          if (pos.includes('w')) { let potentialW = origGroupW - dx; if (potentialW >= 40) { newGroupW = potentialW; newGroupX = minX + dx; } }
+          if (pos.includes('n')) { let potentialH = origGroupH - dy; if (potentialH >= 40) { newGroupH = potentialH; newGroupY = minY + dy; } }
+          let scaleX = newGroupW / origGroupW; let scaleY = newGroupH / origGroupH;
           groupItems.forEach(item => {
-            let relX = item.l - minX;
-            let relY = item.t - minY;
-            let relW = item.w;
-            let relH = item.h;
-
-            let finalL = Math.round(newGroupX + (relX * scaleX));
-            let finalT = Math.round(newGroupY + (relY * scaleY));
-            let finalW = Math.max(20, Math.round(relW * scaleX));
-            let finalH = Math.max(20, Math.round(relH * scaleY));
-
-            if (finalL < 0) finalL = 0;
-            if (finalL + finalW > 850) finalW = 850 - finalL;
-
-            item.block.style.left = finalL + 'px';
-            item.block.style.top = finalT + 'px';
-            item.block.style.width = finalW + 'px';
-            item.block.style.height = finalH + 'px';
+            let relX = item.l - minX; let relY = item.t - minY;
+            let finalL = Math.round(newGroupX + (relX * scaleX)); let finalT = Math.round(newGroupY + (relY * scaleY));
+            let finalW = Math.max(20, Math.round(item.w * scaleX)); let finalH = Math.max(20, Math.round(item.h * scaleY));
+            if (finalL < 0) finalL = 0; if (finalL + finalW > 850) finalW = 850 - finalL;
+            item.block.style.left = finalL + 'px'; item.block.style.top = finalT + 'px'; item.block.style.width = finalW + 'px'; item.block.style.height = finalH + 'px';
           });
           updateMultiSelectionBoundingBox();
         }
-
-        function onMouseUp() {
-          document.removeEventListener('mousemove', onMouseMove);
-          document.removeEventListener('mouseup', onMouseUp);
-          updateCanvasHeight();
-          saveState();
-        }
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
+        function onMouseUp() { document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); updateCanvasHeight(); saveState(); }
+        document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp);
       });
     });
 
@@ -425,24 +438,46 @@
     }
     function getLowestPoint() { let lowestY = 0; document.querySelectorAll('.block').forEach(block => { let bottomEdge = parseInt(block.style.top || 0) + block.offsetHeight; if (bottomEdge > lowestY) lowestY = bottomEdge; }); return lowestY; }
 
+    // --- CORRECCIÓN EN ADDBLOCK PARA RESTAURAR BIEN ---
     function addBlock(type, restoreData = null) {
       const block = document.createElement('div'); block.className = 'block'; block.dataset.type = type; 
-      if (restoreData) { block.style.left = restoreData.x; block.style.top = restoreData.y; block.style.width = restoreData.w; block.style.height = restoreData.h; } 
-      else { block.style.left = '0px'; block.style.top = getLowestPoint() + 'px'; block.style.width = '850px'; }
+      if (restoreData) { 
+          block.style.left = restoreData.x; block.style.top = restoreData.y; block.style.width = restoreData.w; block.style.height = restoreData.h; 
+          if(restoreData.src) block.dataset.src = restoreData.src; 
+          if(restoreData.href) block.dataset.href = restoreData.href;
+      } else { 
+          block.style.left = '0px'; block.style.top = getLowestPoint() + 'px'; block.style.width = '850px'; 
+      }
 
       const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-btn'; deleteBtn.innerHTML = 'X'; deleteBtn.onclick = function(e) { e.stopPropagation(); removeFromSelection(block); block.remove(); updateCanvasHeight(); updateMultiSelectionBoundingBox(); saveState(); }; block.appendChild(deleteBtn);
 
       if (type === 'image') {
-        if (!restoreData) block.style.height = '150px'; const content = document.createElement('div'); content.className = 'block-content bg-image'; content.innerHTML = 'Imagen (Clic para adjuntar)'; block.appendChild(content);
+        if (!restoreData) block.style.height = '150px'; 
+        const content = document.createElement('div'); content.className = 'block-content bg-image'; 
+        if (restoreData && restoreData.src) {
+           content.innerHTML = `<img src="${restoreData.src}" style="width:100%; height:100%; object-fit:cover; pointer-events:none;">`;
+        } else { content.innerHTML = 'Imagen (Clic para adjuntar)'; }
+        block.appendChild(content);
       } else if (type === 'text') {
-        if (!restoreData) block.style.height = '100px'; const content = document.createElement('div'); content.className = 'block-text';
-        if (!restoreData) { content.style.fontFamily = 'Arial, sans-serif'; content.style.fontSize = '14px'; content.style.lineHeight = '20px'; content.style.letterSpacing = '0px'; content.style.color = '#000000'; content.style.textAlign = 'left'; content.style.fontWeight = 'normal'; content.style.fontStyle = 'normal'; content.innerHTML = 'Doble clic acá para editar el texto.'; }
+        if (!restoreData) block.style.height = '100px'; 
+        const content = document.createElement('div'); content.className = 'block-text';
+        if (restoreData) {
+           content.style.cssText = restoreData.css; content.innerHTML = restoreData.html;
+        } else { 
+           content.style.fontFamily = 'Arial, sans-serif'; content.style.fontSize = '14px'; content.style.lineHeight = '20px'; content.style.color = '#000000'; content.style.textAlign = 'left'; content.style.fontWeight = 'normal'; content.style.fontStyle = 'normal'; content.innerHTML = 'Doble clic acá para editar el texto.'; 
+        }
         block.addEventListener('dblclick', function(e) { if (selectedBlocks.size === 1) { content.contentEditable = true; content.classList.add('editing'); content.focus(); } });
         content.addEventListener('blur', function() { content.contentEditable = false; content.classList.remove('editing'); saveState(); }); block.appendChild(content);
       } else if (type === 'gif') {
-        if (!restoreData) block.style.height = '150px'; const content = document.createElement('div'); content.className = 'block-content bg-gif'; content.innerHTML = 'GIF (Pegar link)'; block.appendChild(content);
+        if (!restoreData) block.style.height = '150px'; 
+        const content = document.createElement('div'); content.className = 'block-content bg-gif'; 
+        if (restoreData && restoreData.src) {
+           content.innerHTML = `<img src="${restoreData.src}" style="width:100%; height:100%; object-fit:cover; pointer-events:none;">`;
+        } else { content.innerHTML = 'GIF (Pegar link)'; }
+        block.appendChild(content);
       } else if (type === 'spacer') {
-        if (!restoreData) block.style.height = '30px'; const content = document.createElement('div'); content.className = 'block-content bg-spacer'; content.innerHTML = '<span style="color:#aaa; font-size:11px;">[Espacio Vacío]</span>'; block.appendChild(content);
+        if (!restoreData) block.style.height = '30px'; 
+        const content = document.createElement('div'); content.className = 'block-content bg-spacer'; content.innerHTML = '<span style="color:#aaa; font-size:11px;">[Espacio Vacío]</span>'; block.appendChild(content);
       }
 
       const handlePositions = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
@@ -514,54 +549,33 @@
       return block; 
     }
 
-    // --- FUNCIONES PARA GUARDAR Y ABRIR PROYECTOS (.bmail) ---
     function saveProject() {
-      saveState(); // Aseguramos que el estado actual esté en el historial
+      saveState(); 
       const currentState = historyArr[historyIndex];
-      const projectData = {
-        subject: subjectInput.value,
-        blocks: currentState
-      };
+      const projectData = { subject: subjectInput.value, blocks: currentState };
       const blob = new Blob([JSON.stringify(projectData)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = (subjectInput.value.trim() || 'Mi_Proyecto') + '.bmail';
-      a.click();
-      URL.revokeObjectURL(url);
+      const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url;
+      a.download = (subjectInput.value.trim() || 'Mi_Proyecto') + '.bmail'; a.click(); URL.revokeObjectURL(url);
     }
 
-    function triggerLoadProject() {
-      document.getElementById('project-upload').click();
-    }
-
+    function triggerLoadProject() { document.getElementById('project-upload').click(); }
     function handleProjectUpload(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
+      const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
       reader.onload = function(event) {
         try {
           const projectData = JSON.parse(event.target.result);
           if (projectData.subject) subjectInput.value = projectData.subject;
-          if (projectData.blocks) {
-            loadState(projectData.blocks);
-            saveState();
-          }
-        } catch (err) {
-          alert("El archivo .bmail no es válido o está dañado.");
-        }
-      };
-      reader.readAsText(file);
-      e.target.value = ""; 
+          if (projectData.blocks) { loadState(projectData.blocks); saveState(); }
+        } catch (err) { alert("El archivo .bmail no es válido o está dañado."); }
+      }; reader.readAsText(file); e.target.value = ""; 
     }
 
-    // --- EXPORTAR EML ---
     function exportEML() {
       clearSelection();
       let subjectStr = subjectInput.value.trim(); if (!subjectStr) subjectStr = "Mi Nuevo Newsletter";
       let blocks = Array.from(document.querySelectorAll('.block')).map(b => {
         let tEl = b.querySelector('.block-text');
-        return { type: b.dataset.type, x: parseInt(b.style.left || 0), y: parseInt(b.style.top || 0), w: b.offsetWidth, h: b.offsetHeight, src: b.dataset.src || '', html: tEl ? tEl.innerHTML : '', css: tEl ? tEl.style.cssText : '' };
+        return { type: b.dataset.type, x: parseInt(b.style.left || 0), y: parseInt(b.style.top || 0), w: b.offsetWidth, h: b.offsetHeight, src: b.dataset.src || '', href: b.dataset.href || '', html: tEl ? tEl.innerHTML : '', css: tEl ? tEl.style.cssText : '' };
       });
       if (blocks.length === 0) { alert("El lienzo está vacío. Agregá algo antes de exportar."); return; }
       blocks.sort((a, b) => a.y - b.y || a.x - b.x);
@@ -590,14 +604,16 @@
           htmlTable += `<td width="${b.w}" height="${b.h}" valign="top" style="width:${b.w}px; height:${b.h}px; max-width:${b.w}px; padding:0; margin:0; overflow:hidden;">`;
           
           if (b.type === 'image' || b.type === 'gif') {
+            let imgTag = '';
             if (b.src && b.src.startsWith('data:image')) {
                 let cid = 'img_' + attachments.length + '@newsletter'; let mimeType = b.src.split(';')[0].split(':')[1]; let base64Data = b.src.split(',')[1]; attachments.push({ cid, mimeType, base64Data });
-                htmlTable += `<img src="cid:${cid}" width="${b.w}" height="${b.h}" style="display:block; width:${b.w}px; height:${b.h}px; max-width:${b.w}px; border:0; outline:none; text-decoration:none; object-fit:cover;" />`;
+                imgTag = `<img src="cid:${cid}" width="${b.w}" height="${b.h}" style="display:block; width:${b.w}px; height:${b.h}px; max-width:${b.w}px; border:0; outline:none; text-decoration:none; object-fit:cover;" />`;
             } else if (b.src) { 
-                htmlTable += `<img src="${b.src}" width="${b.w}" height="${b.h}" style="display:block; width:${b.w}px; height:${b.h}px; max-width:${b.w}px; border:0; outline:none; text-decoration:none; object-fit:cover;" />`; 
+                imgTag = `<img src="${b.src}" width="${b.w}" height="${b.h}" style="display:block; width:${b.w}px; height:${b.h}px; max-width:${b.w}px; border:0; outline:none; text-decoration:none; object-fit:cover;" />`; 
             } else { 
-                htmlTable += `<div style="width:${b.w}px; height:${b.h}px; background:#e0e0e0;"></div>`; 
+                imgTag = `<div style="width:${b.w}px; height:${b.h}px; background:#e0e0e0;"></div>`; 
             }
+            if (b.href) htmlTable += `<a href="${b.href}" target="_blank" style="text-decoration:none;">${imgTag}</a>`; else htmlTable += imgTag;
           } else if (b.type === 'text') {
             htmlTable += `<div style="${b.css}; padding:15px; box-sizing:border-box; margin:0; max-width:${b.w}px;">${b.html}</div>`;
           } else if (b.type === 'spacer') {
