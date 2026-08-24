@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Mi Creador de Newsletters</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; background-color: #2b2b2b; color: #fff; }
+    #canvas-container { flex: 1; display: flex; justify-content: center; padding: 40px; overflow-y: auto; position: relative; }
+    #newsletter-canvas { width: 700px; min-height: 800px; background-color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative; }
+    #selection-box { position: absolute; border: 1px solid #0d99ff; background-color: rgba(13, 153, 255, 0.2); display: none; pointer-events: none; z-index: 9999; }
+    #sidebar { width: 300px; background-color: #1e1e1e; border-left: 1px solid #444; padding: 20px; display: flex; flex-direction: column; overflow-y: auto; z-index: 10000; }
+    h2 { font-size: 16px; margin-top: 0; margin-bottom: 20px; color: #ccc; }
+    .tool-btn { background-color: #333; color: #fff; border: 1px solid #555; padding: 12px; margin-bottom: 10px; border-radius: 6px; cursor: pointer; text-align: left; font-size: 14px; }
+    .tool-btn:hover { background-color: #444; }
+    #properties-panel { background-color: #2a2a2a; padding: 15px; border-radius: 6px; margin-top: 20px; display: none; }
+    #multi-select-msg { display: none; color: #0d99ff; font-size: 13px; text-align: center; margin-bottom: 10px; background: rgba(13, 153, 255, 0.1); padding: 8px; border-radius: 4px; }
+    #single-properties { display: block; }
+    .align-group { display: flex; gap: 5px; margin-bottom: 15px; }
+    .align-btn { flex: 1; text-align: center; padding: 8px 0; margin-bottom: 0; font-size: 16px; font-weight: bold; background-color: #111; border-color: #444; }
+    .align-btn:hover { background-color: #333; border-color: #0d99ff; }
+    .prop-row { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
+    .prop-row label { font-size: 12px; color: #aaa; }
+    .prop-row input { width: 60px; background: #111; border: 1px solid #444; color: white; padding: 4px; border-radius: 4px; text-align: right; }
+    #media-properties, #text-props { margin-top: 15px; border-top: 1px solid #444; padding-top: 15px; display: none; }
+    .media-input { width: 100%; box-sizing: border-box; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; margin-top: 5px; }
+    .text-prop-box { display:flex; align-items:center; background:#111; border:1px solid #444; border-radius:4px; padding:0 5px; height: 32px; }
+    .text-prop-box input { width:100%; border:none; background:transparent; color:white; outline:none; text-align:right; font-size: 13px;}
+    .block { position: absolute; background-color: #fff; box-sizing: border-box; min-width: 50px; min-height: 50px; cursor: grab; transition: box-shadow 0.2s, transform 0.2s; }
+    .block.dragging { cursor: grabbing; z-index: 8000 !important; opacity: 0.85; box-shadow: 0 15px 30px rgba(0,0,0,0.4); transform: scale(1.02); }
+    .block.selected { border: 1.5px solid #0d99ff; z-index: 50; }
+    .block:not(.selected) { border: 1px dashed #ccc; }
+    .block-content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; box-sizing: border-box; color: #666; text-align: center; padding: 10px; pointer-events: none; overflow: hidden; }
+    .bg-image { background-color: #e0e0e0; }
+    .bg-gif { background-color: #ffd1dc; }
+    .bg-spacer { background: repeating-linear-gradient(45deg, #f9f9f9, #f9f9f9 10px, #ffffff 10px, #ffffff 20px); }
+    .block-text { width: 100%; height: 100%; padding: 15px; box-sizing: border-box; cursor: default; overflow: hidden; pointer-events: none; }
+    .block-text.editing { cursor: text; pointer-events: auto; outline: none; border: 1px dashed #0d99ff; }
+    .delete-btn { position: absolute; top: -12px; right: -12px; background: red; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: none; z-index: 200; pointer-events: auto; }
+    .block.selected .delete-btn { display: block; }
+    .resize-handle { position: absolute; width: 8px; height: 8px; background-color: #fff; border: 1px solid #0d99ff; display: none; z-index: 150; }
+    body.single-selection .block.selected .resize-handle { display: block; }
+    .nw { top: -5px; left: -5px; cursor: nwse-resize; } .n { top: -5px; left: calc(50% - 4px); cursor: ns-resize; } .ne { top: -5px; right: -5px; cursor: nesw-resize; } .e { top: calc(50% - 4px); right: -5px; cursor: ew-resize; }
+    .se { bottom: -5px; right: -5px; cursor: nwse-resize; } .s { bottom: -5px; left: calc(50% - 4px); cursor: ns-resize; } .sw { bottom: -5px; left: -5px; cursor: nesw-resize; } .w { top: calc(50% - 4px); left: -5px; cursor: ew-resize; }
+  </style>
+</head>
+<body>
+  <div id="canvas-container">
+    <div id="newsletter-canvas"><div id="selection-box"></div></div>
+  </div>
+
+  <div id="sidebar">
+    <div style="background-color: #2a2a2a; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+      <label style="font-size: 13px; color: #0d99ff; font-weight: bold; display:block; margin-bottom:5px;">✉️ Asunto del Correo</label>
+      <input type="text" id="email-subject" class="media-input" placeholder="Ej: ¡Llegaron las ofertas!" style="margin-top:0;">
+    </div>
+
+    <h2>Herramientas</h2>
+    <button class="tool-btn" onclick="addBlock('image')">🖼️ Agregar Imagen</button>
+    <button class="tool-btn" onclick="addBlock('text')">T Agregar Texto</button>
+    <button class="tool-btn" onclick="addBlock('gif')">🎬 Agregar GIF</button>
+    <!-- NUEVA HERRAMIENTA -->
+    <button class="tool-btn" onclick="addBlock('spacer')">⬜ Tabla Vacía (Espacio)</button>
+    
+    <div id="properties-panel">
+      <h2 style="margin-bottom: 10px; color: #0d99ff;">Propiedades</h2>
+      <div id="multi-select-msg">Varios bloques seleccionados.<br><small>Suprimir para borrar. Ctrl+C para copiar.</small></div>
+      
+      <div id="single-properties">
+        <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px;">Alinear caja con el lienzo</label>
+        <div class="align-group">
+          <button class="tool-btn align-btn" onclick="alignBlock('left')" title="Izquierda">|◀</button>
+          <button class="tool-btn align-btn" onclick="alignBlock('center')" title="Centro">▶◀</button>
+          <button class="tool-btn align-btn" onclick="alignBlock('right')" title="Derecha">▶|</button>
+        </div>
+        
+        <div class="prop-row"><label>Pos. X</label><input type="number" id="prop-x" onchange="updateSelectedBlock()"></div>
+        <div class="prop-row"><label>Pos. Y</label><input type="number" id="prop-y" onchange="updateSelectedBlock()"></div>
+        <div class="prop-row"><label>Ancho</label><input type="number" id="prop-w" onchange="updateSelectedBlock()"></div>
+        <div class="prop-row"><label>Alto</label><input type="number" id="prop-h" onchange="updateSelectedBlock()"></div>
+        
+        <div id="media-properties">
+          <div id="image-props" style="display:none;">
+             <label style="font-size: 12px; color: #aaa;">Archivo local (Se adjunta al mail)</label>
+             <input type="file" id="image-upload" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
+             <button class="tool-btn" onclick="document.getElementById('image-upload').click()" style="width:100%; background:#1FAF38; text-align:center; margin-top:5px;">Adjuntar Imagen</button>
+          </div>
+          <div id="gif-props" style="display:none;">
+             <label style="font-size: 12px; color: #aaa;">Pegá acá el Embed o Link de Giphy</label>
+             <input type="text" id="gif-url" class="media-input" placeholder="Pegar código..." onchange="handleGifURL(event)">
+          </div>
+        </div>
+        
+        <div id="text-props">
+          <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px;">Carácter</label>
+          <select id="prop-font-family" class="media-input" style="margin-top:0;" onchange="updateTextProperties()">
+            <option value="Arial, sans-serif">Arial</option>
+            <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
+            <option value="'Times New Roman', Times, serif">Times New Roman</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="'Courier New', Courier, monospace">Courier New</option>
+            <option value="Verdana, sans-serif">Verdana</option>
+          </select>
+          
+          <div style="display:flex; justify-content:space-between; margin-top:5px;">
+            <select id="prop-font-weight" class="media-input" style="width:65%; margin-top:0;" onchange="updateTextProperties()">
+              <option value="normal">Regular</option>
+              <option value="bold">Bold</option>
+              <option value="italic">Italic</option>
+            </select>
+            <input type="color" id="prop-text-color" title="Color de texto" style="width:30%; height:33px; margin-top:0; background:none; border:1px solid #444; border-radius:4px; cursor:pointer;" onchange="updateTextProperties()">
+          </div>
+
+          <div style="display:flex; justify-content:space-between; margin-top:10px;">
+            <div class="text-prop-box" style="width:48%;" title="Tamaño de fuente (px)">
+              <span style="font-size:14px; color:#aaa; font-weight:bold; margin-right:5px;">T</span>
+              <input type="number" id="prop-font-size" onchange="updateTextProperties()">
+              <span style="font-size:10px; color:#666; margin-left:3px;">px</span>
+            </div>
+            <div class="text-prop-box" style="width:48%;" title="Interlineado (px)">
+              <span style="font-size:14px; color:#aaa; font-weight:bold; margin-right:5px;">↕</span>
+              <input type="number" id="prop-line-height" onchange="updateTextProperties()">
+              <span style="font-size:10px; color:#666; margin-left:3px;">px</span>
+            </div>
+          </div>
+          
+          <div style="display:flex; justify-content:space-between; margin-top:5px;">
+            <div class="text-prop-box" style="width:48%;" title="Espaciado de letras / Tracking (px)">
+              <span style="font-size:12px; color:#aaa; font-weight:bold; margin-right:5px;">VA</span>
+              <input type="number" id="prop-letter-spacing" onchange="updateTextProperties()">
+              <span style="font-size:10px; color:#666; margin-left:3px;">px</span>
+            </div>
+          </div>
+
+          <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px; margin-top:15px;">Párrafo</label>
+          <div class="align-group">
+            <button class="tool-btn align-btn" onclick="updateTextAlign('left')" title="Alinear a la Izquierda" style="font-size:16px;">⫷</button>
+            <button class="tool-btn align-btn" onclick="updateTextAlign('center')" title="Centrar" style="font-size:16px;">≡</button>
+            <button class="tool-btn align-btn" onclick="updateTextAlign('right')" title="Alinear a la Derecha" style="font-size:16px;">⫸</button>
+            <button class="tool-btn align-btn" onclick="updateTextAlign('justify')" title="Justificar" style="font-size:16px;">▤</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <h2 style="margin-top: 30px;">Exportar</h2>
+    <button class="tool-btn" onclick="exportEML()" style="background-color: #1FAF38; border-color: #158a29; text-align: center; font-weight:bold;">📥 Exportar a .EML (Outlook)</button>
+    <div style="font-size:10px; color:#666; text-align:center; margin-top:10px;">Versión 0.1.1</div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('newsletter-canvas');
+    const selectionBox = document.getElementById('selection-box');
+    const propertiesPanel = document.getElementById('properties-panel');
+    const singleProperties = document.getElementById('single-properties');
+    const multiSelectMsg = document.getElementById('multi-select-msg');
+    const propX = document.getElementById('prop-x'), propY = document.getElementById('prop-y');
+    const propW = document.getElementById('prop-w'), propH = document.getElementById('prop-h');
+    const mediaProperties = document.getElementById('media-properties');
+    const imageProps = document.getElementById('image-props'), gifProps = document.getElementById('gif-props');
+    const gifUrlInput = document.getElementById('gif-url');
+    const subjectInput = document.getElementById('email-subject');
+    
+    const textProps = document.getElementById('text-props');
+    const propFontFamily = document.getElementById('prop-font-family');
+    const propFontWeight = document.getElementById('prop-font-weight');
+    const propTextColor = document.getElementById('prop-text-color');
+    const propFontSize = document.getElementById('prop-font-size');
+    const propLineHeight = document.getElementById('prop-line-height');
+    const propLetterSpacing = document.getElementById('prop-letter-spacing');
+    
+    let selectedBlocks = new Set(); let clipboard = []; const SNAP_DIST = 10; 
+    let historyArr = []; let historyIndex = -1; let isRestoring = false;
+
+    function saveState() {
+      if (isRestoring) return;
+      historyArr = historyArr.slice(0, historyIndex + 1);
+      let currentState = Array.from(document.querySelectorAll('.block')).map(b => ({
+        type: b.dataset.type, x: b.style.left, y: b.style.top, w: b.style.width, h: b.style.height,
+        src: b.dataset.src || '', html: b.querySelector('.block-text') ? b.querySelector('.block-text').innerHTML : '',
+        css: b.querySelector('.block-text') ? b.querySelector('.block-text').style.cssText : '', selected: b.classList.contains('selected')
+      }));
+      historyArr.push(currentState); historyIndex++;
+    }
+
+    function undo() { if (historyIndex > 0) { historyIndex--; loadState(historyArr[historyIndex]); } }
+    function redo() { if (historyIndex < historyArr.length - 1) { historyIndex++; loadState(historyArr[historyIndex]); } }
+
+    function loadState(state) {
+      isRestoring = true; document.querySelectorAll('.block').forEach(b => b.remove()); selectedBlocks.clear();
+      state.forEach(item => { let b = addBlock(item.type, item); if (item.selected) addToSelection(b); });
+      updateCanvasHeight(); updatePropertiesUI(); isRestoring = false;
+    }
+    window.onload = function() { saveState(); }
+
+    function rgbToHex(rgb) {
+      if (!rgb || rgb.startsWith('#')) return rgb || '#000000';
+      let m = rgb.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
+      if (m) return "#" + ("0" + parseInt(m[1],10).toString(16)).slice(-2) + ("0" + parseInt(m[2],10).toString(16)).slice(-2) + ("0" + parseInt(m[3],10).toString(16)).slice(-2);
+      return '#000000'; 
+    }
+
+    function updateCanvasHeight() {
+      let maxBottom = 800; document.querySelectorAll('.block').forEach(block => { let bottom = parseInt(block.style.top || 0) + block.offsetHeight; if (bottom > maxBottom) maxBottom = bottom; });
+      canvas.style.height = (maxBottom + 200) + 'px'; 
+    }
+    const canvasObserver = new MutationObserver(updateCanvasHeight); canvasObserver.observe(canvas, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+
+    function clearSelection() {
+      selectedBlocks.forEach(block => { block.classList.remove('selected'); const textContent = block.querySelector('.block-text'); if (textContent) { textContent.classList.remove('editing'); textContent.contentEditable = false; } });
+      selectedBlocks.clear(); updatePropertiesUI();
+    }
+    function addToSelection(block) { selectedBlocks.add(block); block.classList.add('selected'); updatePropertiesUI(); }
+    function removeFromSelection(block) {
+      selectedBlocks.delete(block); block.classList.remove('selected'); const textContent = block.querySelector('.block-text'); if (textContent) { textContent.classList.remove('editing'); textContent.contentEditable = false; } updatePropertiesUI();
+    }
+
+    function updatePropertiesUI() {
+      if (selectedBlocks.size === 0) { propertiesPanel.style.display = 'none'; document.body.classList.remove('single-selection'); } 
+      else if (selectedBlocks.size === 1) {
+        propertiesPanel.style.display = 'block'; multiSelectMsg.style.display = 'none'; singleProperties.style.display = 'block'; document.body.classList.add('single-selection'); 
+        let block = Array.from(selectedBlocks)[0];
+        propX.value = parseInt(block.style.left || 0); propY.value = parseInt(block.style.top || 0); propW.value = block.offsetWidth; propH.value = block.offsetHeight;
+        const type = block.dataset.type;
+        if (type === 'image' || type === 'gif') {
+          mediaProperties.style.display = 'block'; textProps.style.display = 'none'; imageProps.style.display = (type === 'image') ? 'block' : 'none'; gifProps.style.display = (type === 'gif') ? 'block' : 'none';
+          if (type === 'gif') gifUrlInput.value = block.dataset.src || '';
+        } else if (type === 'text') {
+          mediaProperties.style.display = 'none'; textProps.style.display = 'block'; let tEl = block.querySelector('.block-text');
+          propFontFamily.value = tEl.style.fontFamily.replace(/"/g, '') || 'Arial, sans-serif';
+          if (tEl.style.fontWeight === 'bold' || tEl.style.fontWeight === '700') propFontWeight.value = 'bold'; else if (tEl.style.fontStyle === 'italic') propFontWeight.value = 'italic'; else propFontWeight.value = 'normal';
+          propFontSize.value = parseInt(tEl.style.fontSize) || 14; propLineHeight.value = parseInt(tEl.style.lineHeight) || 20; propLetterSpacing.value = parseInt(tEl.style.letterSpacing) || 0; propTextColor.value = rgbToHex(tEl.style.color);
+        } else if (type === 'spacer') {
+          mediaProperties.style.display = 'none'; textProps.style.display = 'none';
+        }
+      } else { propertiesPanel.style.display = 'block'; multiSelectMsg.style.display = 'block'; singleProperties.style.display = 'none'; document.body.classList.remove('single-selection'); }
+    }
+
+    function updateSelectedBlock() {
+      if (selectedBlocks.size !== 1) return; let block = Array.from(selectedBlocks)[0]; let newW = parseInt(propW.value), newX = parseInt(propX.value);
+      if (newW > 700) newW = 700; if (newX + newW > 700) newX = 700 - newW; if (newX < 0) newX = 0;
+      block.style.width = newW + 'px'; block.style.height = propH.value + 'px'; block.style.left = newX + 'px'; block.style.top = propY.value + 'px'; updateCanvasHeight(); saveState();
+    }
+
+    function alignBlock(alignment) {
+      if (selectedBlocks.size === 0) return;
+      selectedBlocks.forEach(block => { let w = block.offsetWidth; if (alignment === 'left') block.style.left = '0px'; else if (alignment === 'center') block.style.left = Math.round((700 - w) / 2) + 'px'; else if (alignment === 'right') block.style.left = (700 - w) + 'px'; });
+      updatePropertiesUI(); saveState();
+    }
+
+    function updateTextProperties() {
+      if (selectedBlocks.size !== 1) return; let block = Array.from(selectedBlocks)[0]; if (block.dataset.type !== 'text') return; let tEl = block.querySelector('.block-text');
+      tEl.style.fontFamily = propFontFamily.value; tEl.style.fontSize = propFontSize.value + 'px'; tEl.style.lineHeight = propLineHeight.value + 'px'; tEl.style.letterSpacing = propLetterSpacing.value + 'px'; tEl.style.color = propTextColor.value;
+      if (propFontWeight.value === 'bold') { tEl.style.fontWeight = 'bold'; tEl.style.fontStyle = 'normal'; } else if (propFontWeight.value === 'italic') { tEl.style.fontWeight = 'normal'; tEl.style.fontStyle = 'italic'; } else { tEl.style.fontWeight = 'normal'; tEl.style.fontStyle = 'normal'; }
+      saveState();
+    }
+
+    function updateTextAlign(align) { if (selectedBlocks.size === 0) return; selectedBlocks.forEach(block => { if (block.dataset.type === 'text') { block.querySelector('.block-text').style.textAlign = align; } }); saveState(); }
+
+    document.addEventListener('keydown', function(e) {
+      if (document.activeElement.isContentEditable || document.activeElement.tagName === 'INPUT') return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { if (e.shiftKey) redo(); else undo(); e.preventDefault(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { redo(); e.preventDefault(); return; }
+      if (e.key === 'Delete' || e.key === 'Backspace') { if(selectedBlocks.size > 0) { selectedBlocks.forEach(block => block.remove()); selectedBlocks.clear(); updatePropertiesUI(); updateCanvasHeight(); saveState(); } }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') { clipboard = []; selectedBlocks.forEach(b => { let tEl = b.querySelector('.block-text'); clipboard.push({ type: b.dataset.type, w: b.offsetWidth, h: b.offsetHeight, l: parseInt(b.style.left || 0), t: parseInt(b.style.top || 0), src: b.dataset.src || '', html: tEl ? tEl.innerHTML : '', css: tEl ? tEl.style.cssText : '' }); }); }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+        if(clipboard.length === 0) return; clearSelection();
+        clipboard.forEach(item => {
+          let newBlock = addBlock(item.type); newBlock.style.width = item.w + 'px'; newBlock.style.height = item.h + 'px'; newBlock.style.left = Math.min(item.l + 20, 700 - item.w) + 'px'; newBlock.style.top = (item.t + 20) + 'px';
+          if (item.type === 'image' || item.type === 'gif') { if (item.src) { newBlock.dataset.src = item.src; newBlock.querySelector('.block-content').innerHTML = `<img src="${item.src}" style="width:100%; height:100%; object-fit:cover; pointer-events:none;">`; } } 
+          else if (item.type === 'text') { let tEl = newBlock.querySelector('.block-text'); tEl.innerHTML = item.html; if (item.css) tEl.style.cssText = item.css; }
+          addToSelection(newBlock);
+        });
+        updateCanvasHeight(); saveState();
+      }
+    });
+
+    canvas.addEventListener('mousedown', function(e) {
+      if (e.target !== canvas) return; if (!e.shiftKey) clearSelection();
+      let rect = canvas.getBoundingClientRect(); let startX = e.clientX - rect.left, startY = e.clientY - rect.top;
+      selectionBox.style.display = 'block'; selectionBox.style.left = startX + 'px'; selectionBox.style.top = startY + 'px'; selectionBox.style.width = '0px'; selectionBox.style.height = '0px';
+
+      function onMouseMoveBox(moveEvent) {
+        let currentX = moveEvent.clientX - rect.left, currentY = moveEvent.clientY - rect.top;
+        let left = Math.min(startX, currentX), top = Math.min(startY, currentY); let width = Math.abs(currentX - startX), height = Math.abs(currentY - startY);
+        selectionBox.style.left = left + 'px'; selectionBox.style.top = top + 'px'; selectionBox.style.width = width + 'px'; selectionBox.style.height = height + 'px';
+        let selectRect = { left: left, top: top, right: left + width, bottom: top + height };
+        document.querySelectorAll('.block').forEach(block => {
+          let bL = parseInt(block.style.left || 0), bT = parseInt(block.style.top || 0); let bRect = { left: bL, top: bT, right: bL + block.offsetWidth, bottom: bT + block.offsetHeight };
+          if (checkOverlap(selectRect, bRect)) { addToSelection(block); } else if (!e.shiftKey) { removeFromSelection(block); }
+        });
+      }
+      function onMouseUpBox() { selectionBox.style.display = 'none'; document.removeEventListener('mousemove', onMouseMoveBox); document.removeEventListener('mouseup', onMouseUpBox); }
+      document.addEventListener('mousemove', onMouseMoveBox); document.addEventListener('mouseup', onMouseUpBox);
+    });
+
+    function checkOverlap(rect1, rect2) { return (rect1.left < rect2.right && rect1.right > rect2.left && rect1.top < rect2.bottom && rect1.bottom > rect2.top); }
+    function handleImageUpload(e) { const file = e.target.files[0]; if (!file || selectedBlocks.size !== 1) return; let block = Array.from(selectedBlocks)[0]; const reader = new FileReader(); reader.onload = function(event) { const base64 = event.target.result; block.dataset.src = base64; block.querySelector('.block-content').innerHTML = `<img src="${base64}" style="width:100%; height:100%; object-fit:cover; pointer-events:none;">`; saveState(); }; reader.readAsDataURL(file); }
+    function handleGifURL(e) {
+      let url = e.target.value.trim(); if (selectedBlocks.size !== 1) return; let block = Array.from(selectedBlocks)[0];
+      if (url.includes('<iframe')) { const match = url.match(/src="([^"]+)"/); if (match && match[1]) { let embedUrl = match[1]; let parts = embedUrl.split('/'); let id = parts[parts.length - 1]; url = `https://media.giphy.com/media/${id}/giphy.gif`; } } else if (url.includes('giphy.com/gifs/')) { const parts = url.split('-'); const id = parts[parts.length - 1]; url = `https://media.giphy.com/media/${id}/giphy.gif`; }
+      e.target.value = url; block.dataset.src = url; block.querySelector('.block-content').innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover; pointer-events:none;">`; saveState();
+    }
+    function getLowestPoint() { let lowestY = 0; document.querySelectorAll('.block').forEach(block => { let bottomEdge = parseInt(block.style.top || 0) + block.offsetHeight; if (bottomEdge > lowestY) lowestY = bottomEdge; }); return lowestY; }
+
+    function addBlock(type, restoreData = null) {
+      const block = document.createElement('div'); block.className = 'block'; block.dataset.type = type; 
+      if (restoreData) { block.style.left = restoreData.x; block.style.top = restoreData.y; block.style.width = restoreData.w; block.style.height = restoreData.h; } 
+      else { block.style.left = '0px'; block.style.top = getLowestPoint() + 'px'; block.style.width = '700px'; }
+
+      const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-btn'; deleteBtn.innerHTML = 'X'; deleteBtn.onclick = function(e) { e.stopPropagation(); removeFromSelection(block); block.remove(); updateCanvasHeight(); saveState(); }; block.appendChild(deleteBtn);
+
+      if (type === 'image') {
+        if (!restoreData) block.style.height = '150px'; const content = document.createElement('div'); content.className = 'block-content bg-image'; content.innerHTML = 'Imagen (Clic para adjuntar)'; block.appendChild(content);
+      } else if (type === 'text') {
+        if (!restoreData) block.style.height = '100px'; const content = document.createElement('div'); content.className = 'block-text';
+        if (!restoreData) { content.style.fontFamily = 'Arial, sans-serif'; content.style.fontSize = '14px'; content.style.lineHeight = '20px'; content.style.letterSpacing = '0px'; content.style.color = '#000000'; content.style.textAlign = 'left'; content.style.fontWeight = 'normal'; content.style.fontStyle = 'normal'; content.innerHTML = 'Doble clic acá para editar el texto.'; }
+        block.addEventListener('dblclick', function(e) { if (selectedBlocks.size === 1) { content.contentEditable = true; content.classList.add('editing'); content.focus(); } });
+        content.addEventListener('blur', function() { content.contentEditable = false; content.classList.remove('editing'); saveState(); }); block.appendChild(content);
+      } else if (type === 'gif') {
+        if (!restoreData) block.style.height = '150px'; const content = document.createElement('div'); content.className = 'block-content bg-gif'; content.innerHTML = 'GIF (Pegar link)'; block.appendChild(content);
+      } else if (type === 'spacer') {
+        // NUEVO BLOQUE: ESPACIADOR
+        if (!restoreData) block.style.height = '30px'; const content = document.createElement('div'); content.className = 'block-content bg-spacer'; content.innerHTML = '<span style="color:#aaa; font-size:11px;">[Espacio Vacío]</span>'; block.appendChild(content);
+      }
+
+      const handlePositions = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+      handlePositions.forEach(pos => {
+        const handle = document.createElement('div'); handle.className = `resize-handle ${pos}`;
+        handle.addEventListener('mousedown', function(e) {
+          e.stopPropagation(); if (!selectedBlocks.has(block)) { clearSelection(); addToSelection(block); }
+          let startX = e.clientX, startY = e.clientY; let startW = block.offsetWidth, startH = block.offsetHeight; let startL = parseInt(block.style.left || 0), startT = parseInt(block.style.top || 0);
+          function onMouseMove(moveEvent) {
+            let dx = moveEvent.clientX - startX, dy = moveEvent.clientY - startY; let newW = startW, newH = startH, newL = startL, newT = startT; let otherBlocks = Array.from(document.querySelectorAll('.block')).filter(b => b !== block);
+            if (pos.includes('e')) newW = startW + dx; if (pos.includes('w')) { newW = startW - dx; newL = startL + dx; } if (pos.includes('s')) newH = startH + dy; if (pos.includes('n')) { newH = startH - dy; newT = startT + dy; }
+            otherBlocks.forEach(other => {
+              let oL = parseInt(other.style.left || 0), oT = parseInt(other.style.top || 0); let oR = oL + other.offsetWidth, oB = oT + other.offsetHeight;
+              if (pos.includes('e')) { if (Math.abs((newL + newW) - oL) < SNAP_DIST) newW = oL - newL; else if (Math.abs((newL + newW) - oR) < SNAP_DIST) newW = oR - newL; }
+              if (pos.includes('w')) { if (Math.abs(newL - oR) < SNAP_DIST) { newW += (newL - oR); newL = oR; } else if (Math.abs(newL - oL) < SNAP_DIST) { newW += (newL - oL); newL = oL; } }
+              if (pos.includes('s')) { if (Math.abs((newT + newH) - oT) < SNAP_DIST) newH = oT - newT; else if (Math.abs((newT + newH) - oB) < SNAP_DIST) newH = oB - newT; }
+              if (pos.includes('n')) { if (Math.abs(newT - oB) < SNAP_DIST) { newH += (newT - oB); newT = oB; } else if (Math.abs(newT - oT) < SNAP_DIST) { newH += (newT - oT); newT = oT; } }
+            });
+            if (newW < 20) { if (pos.includes('w')) newL = startL + startW - 20; newW = 20; } if (newH < 20) { if (pos.includes('n')) newT = startT + startH - 20; newH = 20; }
+            if (newL < 0) { newW += newL; newL = 0; } if (newL + newW > 700) newW = 700 - newL; if (newT < 0) { newH += newT; newT = 0; }
+            let testRect = { left: newL, top: newT, right: newL + newW, bottom: newT + newH }; let collision = false;
+            for (let other of otherBlocks) { let oRect = { left: parseInt(other.style.left || 0), top: parseInt(other.style.top || 0), right: parseInt(other.style.left || 0) + other.offsetWidth, bottom: parseInt(other.style.top || 0) + other.offsetHeight }; if (checkOverlap(testRect, oRect)) { collision = true; break; } }
+            if (!collision) { block.style.width = newW + 'px'; block.style.height = newH + 'px'; block.style.left = newL + 'px'; block.style.top = newT + 'px'; updatePropertiesUI(); }
+          }
+          function onMouseUp() { document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); updateCanvasHeight(); saveState(); }
+          document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp);
+        });
+        block.appendChild(handle);
+      });
+
+      block.addEventListener('mousedown', function(e) {
+        const textEdit = block.querySelector('.block-text'); if (textEdit && textEdit.classList.contains('editing')) return;
+        if (e.target !== deleteBtn && !e.target.classList.contains('resize-handle')) {
+          e.stopPropagation(); document.body.style.userSelect = 'none'; 
+          if (e.shiftKey) { if (selectedBlocks.has(block)) { removeFromSelection(block); return; } else { addToSelection(block); } } else { if (!selectedBlocks.has(block)) { clearSelection(); addToSelection(block); } }
+          
+          let startX = e.clientX, startY = e.clientY; let groupData = [];
+          selectedBlocks.forEach(b => { b.classList.add('dragging'); groupData.push({ element: b, origLeft: parseInt(b.style.left || 0), origTop: parseInt(b.style.top || 0), width: b.offsetWidth, height: b.offsetHeight }); });
+
+          function onMouseMove(moveEvent) {
+            let dx = moveEvent.clientX - startX, dy = moveEvent.clientY - startY;
+            if (selectedBlocks.size === 1) {
+              let single = groupData[0]; let newX = single.origLeft + dx, newY = single.origTop + dy; let otherBlocks = Array.from(document.querySelectorAll('.block')).filter(b => b !== single.element);
+              if (Math.abs(newX) < SNAP_DIST) newX = 0; if (Math.abs((newX + single.width) - 700) < SNAP_DIST) newX = 700 - single.width; if (Math.abs(newY) < SNAP_DIST) newY = 0;
+              otherBlocks.forEach(other => {
+                let oL = parseInt(other.style.left || 0), oT = parseInt(other.style.top || 0); let oR = oL + other.offsetWidth, oB = oT + other.offsetHeight;
+                if (Math.abs(newX - oR) < SNAP_DIST) newX = oR; else if (Math.abs(newX - oL) < SNAP_DIST) newX = oL; else if (Math.abs((newX + single.width) - oL) < SNAP_DIST) newX = oL - single.width; else if (Math.abs((newX + single.width) - oR) < SNAP_DIST) newX = oR - single.width;
+                if (Math.abs(newY - oB) < SNAP_DIST) newY = oB; else if (Math.abs(newY - oT) < SNAP_DIST) newY = oT; else if (Math.abs((newY + single.height) - oT) < SNAP_DIST) newY = oT - single.height; else if (Math.abs((newY + single.height) - oB) < SNAP_DIST) newY = oB - single.height;
+              });
+              if (newX < 0) newX = 0; if (newX + single.width > 700) newX = 700 - single.width; if (newY < 0) newY = 0;
+              let testRectX = { left: newX, top: single.origTop, right: newX + single.width, bottom: single.origTop + single.height }; let collisionX = false;
+              for (let other of otherBlocks) { let oRect = { left: parseInt(other.style.left || 0), top: parseInt(other.style.top || 0), right: parseInt(other.style.left || 0) + other.offsetWidth, bottom: parseInt(other.style.top || 0) + other.offsetHeight }; if (checkOverlap(testRectX, oRect)) { collisionX = true; break; } }
+              if (!collisionX) single.element.style.left = newX + 'px';
+              let currentX = parseInt(single.element.style.left || 0); let testRectY = { left: currentX, top: newY, right: currentX + single.width, bottom: newY + single.height }; let collisionY = false;
+              for (let other of otherBlocks) { let oRect = { left: parseInt(other.style.left || 0), top: parseInt(other.style.top || 0), right: parseInt(other.style.left || 0) + other.offsetWidth, bottom: parseInt(other.style.top || 0) + other.offsetHeight }; if (checkOverlap(testRectY, oRect)) { collisionY = true; break; } }
+              if (!collisionY) single.element.style.top = newY + 'px';
+              updatePropertiesUI();
+            } else {
+              groupData.forEach(item => { let newX = item.origLeft + dx, newY = item.origTop + dy; if (newX < 0) newX = 0; if (newX + item.width > 700) newX = 700 - item.width; if (newY < 0) newY = 0; item.element.style.left = newX + 'px'; item.element.style.top = newY + 'px'; });
+            }
+          }
+          function onMouseUp() { document.body.style.userSelect = 'auto'; selectedBlocks.forEach(b => b.classList.remove('dragging')); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); updateCanvasHeight(); saveState(); }
+          document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp);
+        }
+      });
+      canvas.appendChild(block); 
+      if(!restoreData) { clearSelection(); addToSelection(block); updateCanvasHeight(); saveState(); }
+      return block; 
+    }
+
+    function exportEML() {
+      clearSelection();
+      let subjectStr = subjectInput.value.trim(); if (!subjectStr) subjectStr = "Mi Nuevo Newsletter";
+      let blocks = Array.from(document.querySelectorAll('.block')).map(b => {
+        let tEl = b.querySelector('.block-text');
+        return { type: b.dataset.type, x: parseInt(b.style.left || 0), y: parseInt(b.style.top || 0), w: b.offsetWidth, h: b.offsetHeight, src: b.dataset.src || '', html: tEl ? tEl.innerHTML : '', css: tEl ? tEl.style.cssText : '' };
+      });
+      if (blocks.length === 0) { alert("El lienzo está vacío. Agregá algo antes de exportar."); return; }
+      blocks.sort((a, b) => a.y - b.y || a.x - b.x);
+
+      let rows = []; let currentRow = null;
+      blocks.forEach(b => {
+        if (!currentRow) { currentRow = { top: b.y, bottom: b.y + b.h, blocks: [b] }; } 
+        else {
+          if (b.y < currentRow.bottom) { currentRow.blocks.push(b); if (b.y + b.h > currentRow.bottom) currentRow.bottom = b.y + b.h; } 
+          else { rows.push(currentRow); currentRow = { top: b.y, bottom: b.y + b.h, blocks: [b] }; }
+        }
+      });
+      if (currentRow) rows.push(currentRow);
+
+      let attachments = [];
+      let htmlTable = `<table width="700" cellpadding="0" cellspacing="0" border="0" align="center" style="background-color:#ffffff; width:700px; max-width:700px; margin: 0 auto; border-collapse: collapse;">`;
+      let currentY = 0;
+
+      rows.forEach(row => {
+        if (row.top > currentY) { let gap = row.top - currentY; htmlTable += `<tr><td height="${gap}" style="font-size:1px; line-height:1px;">&nbsp;</td></tr>`; }
+        htmlTable += `<tr><td><table width="700" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;"><tr>`;
+        row.blocks.sort((a, b) => a.x - b.x); let currentX = 0;
+        
+        row.blocks.forEach(b => {
+          if (b.x > currentX) { let gap = b.x - currentX; htmlTable += `<td width="${gap}" style="font-size:1px; line-height:1px;">&nbsp;</td>`; }
+          htmlTable += `<td width="${b.w}" height="${b.h}" valign="top" style="width:${b.w}px; height:${b.h}px; padding:0; margin:0; overflow:hidden;">`;
+          
+          if (b.type === 'image' || b.type === 'gif') {
+            if (b.src && b.src.startsWith('data:image')) {
+                let cid = 'img_' + attachments.length + '@newsletter'; let mimeType = b.src.split(';')[0].split(':')[1]; let base64Data = b.src.split(',')[1]; attachments.push({ cid, mimeType, base64Data });
+                htmlTable += `<img src="cid:${cid}" width="${b.w}" height="${b.h}" style="display:block; width:${b.w}px; height:${b.h}px; border:0; outline:none; text-decoration:none;" />`;
+            } else if (b.src) { htmlTable += `<img src="${b.src}" width="${b.w}" height="${b.h}" style="display:block; width:${b.w}px; height:${b.h}px; border:0; outline:none; text-decoration:none;" />`; } 
+            else { htmlTable += `<div style="width:${b.w}px; height:${b.h}px; background:#e0e0e0;"></div>`; }
+          } else if (b.type === 'text') {
+            htmlTable += `<div style="${b.css}; padding:15px; box-sizing:border-box; margin:0;">${b.html}</div>`;
+          } else if (b.type === 'spacer') {
+            // EL ESPACIADOR SE EXPORTA COMO UN HUECO TRANSPARENTE EXACTO
+            htmlTable += `<div style="width:${b.w}px; height:${b.h}px; font-size:1px; line-height:1px; background-color:transparent;">&nbsp;</div>`;
+          }
+          
+          htmlTable += `</td>`; currentX = b.x + b.w;
+        });
+
+        if (currentX < 700) { htmlTable += `<td width="${700 - currentX}" style="font-size:1px; line-height:1px;">&nbsp;</td>`; }
+        htmlTable += `</tr></table></td></tr>`; currentY = row.bottom;
+      });
+
+      htmlTable += `</table>`;
+      const boundary = "----=_NextPart_" + Math.random().toString(16).slice(2);
+      let eml = `To: destinatario@ejemplo.com\r\nSubject: ${subjectStr}\r\nX-Unsent: 1\r\nMIME-Version: 1.0\r\nContent-Type: multipart/related; boundary="${boundary}"\r\n\r\n--${boundary}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n<!DOCTYPE html><html><body style="margin:0; padding:20px; background-color:#f4f4f4;">\r\n${htmlTable}\r\n</body></html>\r\n\r\n`;
+      attachments.forEach(att => { eml += `--${boundary}\r\nContent-Type: ${att.mimeType}\r\nContent-Transfer-Encoding: base64\r\nContent-ID: <${att.cid}>\r\n\r\n${att.base64Data}\r\n\r\n`; });
+      eml += `--${boundary}--\r\n`;
+      const blob = new Blob([eml], { type: 'message/rfc822' }); const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'Newsletter.eml'; a.click(); URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>

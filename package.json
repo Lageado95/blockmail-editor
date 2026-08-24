@@ -1,0 +1,37 @@
+{
+  "name": "blockmail-editor",
+  "version": "0.1.1",
+  "description": "Creador visual de Newsletters exportables a EML",
+  "main": "index.js",
+  "author": "Juan Tiago Márquez",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "publish": "electron-builder --win -p always"
+  },
+  "build": {
+    "appId": "com.juantiagomarquez.blockmail",
+    "productName": "BlockMail Editor",
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Lageado95",
+        "repo": "blockmail-editor"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.0"
+  },
+  "devDependencies": {
+    "electron": "^43.4.1",
+    "electron-builder": "^24.13.3"
+  }
+}
