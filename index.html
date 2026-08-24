@@ -9,7 +9,7 @@
     #newsletter-canvas { width: 850px; min-height: 800px; background-color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative; }
     #selection-box { position: absolute; border: 1px solid #0d99ff; background-color: rgba(13, 153, 255, 0.2); display: none; pointer-events: none; z-index: 9999; }
     #sidebar { width: 300px; background-color: #1e1e1e; border-left: 1px solid #444; padding: 20px; display: flex; flex-direction: column; overflow-y: auto; z-index: 10000; }
-    h2 { font-size: 16px; margin-top: 0; margin-bottom: 20px; color: #ccc; }
+    h2 { font-size: 16px; margin-top: 0; margin-bottom: 15px; color: #ccc; }
     .tool-btn { background-color: #333; color: #fff; border: 1px solid #555; padding: 12px; margin-bottom: 10px; border-radius: 6px; cursor: pointer; text-align: left; font-size: 14px; }
     .tool-btn:hover { background-color: #444; }
     #properties-panel { background-color: #2a2a2a; padding: 15px; border-radius: 6px; margin-top: 20px; display: none; }
@@ -64,6 +64,13 @@
   </div>
 
   <div id="sidebar">
+    <h2>Proyecto</h2>
+    <div style="display:flex; gap:10px; margin-bottom: 20px;">
+      <button class="tool-btn" style="flex:1; margin-bottom:0; text-align:center;" onclick="saveProject()">💾 Guardar</button>
+      <button class="tool-btn" style="flex:1; margin-bottom:0; text-align:center;" onclick="document.getElementById('load-project-upload').click()">📂 Abrir</button>
+      <input type="file" id="load-project-upload" accept=".bmail" style="display:none;" onchange="loadProject(event)">
+    </div>
+
     <div style="background-color: #2a2a2a; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
       <label style="font-size: 13px; color: #0d99ff; font-weight: bold; display:block; margin-bottom:5px;">✉️ Asunto del Correo</label>
       <input type="text" id="email-subject" class="media-input" placeholder="Ej: ¡Llegaron las ofertas!" style="margin-top:0;">
@@ -159,7 +166,6 @@
 
     <h2 style="margin-top: 30px;">Exportar</h2>
     <button class="tool-btn" onclick="exportEML()" style="background-color: #1FAF38; border-color: #158a29; text-align: center; font-weight:bold;">📥 Exportar a .EML (Outlook)</button>
-    <div style="font-size:10px; color:#666; text-align:center; margin-top:10px;">Versión 0.1.2</div>
   </div>
 
   <script>
@@ -186,6 +192,62 @@
     
     let selectedBlocks = new Set(); let clipboard = []; const SNAP_DIST = 10; 
     let historyArr = []; let historyIndex = -1; let isRestoring = false;
+
+    // SISTEMA DE GUARDAR/ABRIR PROYECTOS (.bmail)
+    function saveProject() {
+      let projectData = {
+        subject: subjectInput.value,
+        blocks: Array.from(document.querySelectorAll('.block')).map(b => {
+          let tEl = b.querySelector('.block-text');
+          return {
+            type: b.dataset.type,
+            x: b.style.left,
+            y: b.style.top,
+            w: b.style.width,
+            h: b.style.height,
+            src: b.dataset.src || '',
+            html: tEl ? tEl.innerHTML : '',
+            css: tEl ? tEl.style.cssText : ''
+          };
+        })
+      };
+      let json = JSON.stringify(projectData);
+      let blob = new Blob([json], {type: "application/json"});
+      let url = URL.createObjectURL(blob);
+      let a = document.createElement('a');
+      a.href = url;
+      let filename = subjectInput.value.trim().replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'proyecto';
+      a.download = filename + '.bmail';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function loadProject(e) {
+      let file = e.target.files[0];
+      if (!file) return;
+      let reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          let data = JSON.parse(event.target.result);
+          if (data.subject !== undefined) subjectInput.value = data.subject;
+          if (data.blocks && Array.isArray(data.blocks)) {
+            clearSelection();
+            document.querySelectorAll('.block').forEach(b => b.remove());
+            data.blocks.forEach(item => {
+              addBlock(item.type, item);
+            });
+            updateCanvasHeight();
+            historyArr = [];
+            historyIndex = -1;
+            saveState();
+          }
+        } catch (err) {
+          alert("El archivo del proyecto no es válido o está corrupto.");
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    }
 
     function saveState() {
       if (isRestoring) return;
@@ -425,14 +487,36 @@
       const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-btn'; deleteBtn.innerHTML = 'X'; deleteBtn.onclick = function(e) { e.stopPropagation(); removeFromSelection(block); block.remove(); updateCanvasHeight(); updateMultiSelectionBoundingBox(); saveState(); }; block.appendChild(deleteBtn);
 
       if (type === 'image') {
-        if (!restoreData) block.style.height = '150px'; const content = document.createElement('div'); content.className = 'block-content bg-image'; content.innerHTML = 'Imagen (Clic para adjuntar)'; block.appendChild(content);
+        if (!restoreData) block.style.height = '150px'; 
+        const content = document.createElement('div'); content.className = 'block-content bg-image'; 
+        if (restoreData && restoreData.src) {
+           block.dataset.src = restoreData.src;
+           content.innerHTML = `<img src="${restoreData.src}" style="width:100%; height:100%; object-fit:cover; pointer-events:none;">`;
+        } else {
+           content.innerHTML = 'Imagen (Clic para adjuntar)'; 
+        }
+        block.appendChild(content);
       } else if (type === 'text') {
-        if (!restoreData) block.style.height = '100px'; const content = document.createElement('div'); content.className = 'block-text';
-        if (!restoreData) { content.style.fontFamily = 'Arial, sans-serif'; content.style.fontSize = '14px'; content.style.lineHeight = '20px'; content.style.letterSpacing = '0px'; content.style.color = '#000000'; content.style.textAlign = 'left'; content.style.fontWeight = 'normal'; content.style.fontStyle = 'normal'; content.innerHTML = 'Doble clic acá para editar el texto.'; }
+        if (!restoreData) block.style.height = '100px'; 
+        const content = document.createElement('div'); content.className = 'block-text';
+        if (restoreData) { 
+           content.innerHTML = restoreData.html || ''; 
+           if (restoreData.css) content.style.cssText = restoreData.css; 
+        } else { 
+           content.style.fontFamily = 'Arial, sans-serif'; content.style.fontSize = '14px'; content.style.lineHeight = '20px'; content.style.letterSpacing = '0px'; content.style.color = '#000000'; content.style.textAlign = 'left'; content.style.fontWeight = 'normal'; content.style.fontStyle = 'normal'; content.innerHTML = 'Doble clic acá para editar el texto.'; 
+        }
         block.addEventListener('dblclick', function(e) { if (selectedBlocks.size === 1) { content.contentEditable = true; content.classList.add('editing'); content.focus(); } });
         content.addEventListener('blur', function() { content.contentEditable = false; content.classList.remove('editing'); saveState(); }); block.appendChild(content);
       } else if (type === 'gif') {
-        if (!restoreData) block.style.height = '150px'; const content = document.createElement('div'); content.className = 'block-content bg-gif'; content.innerHTML = 'GIF (Pegar link)'; block.appendChild(content);
+        if (!restoreData) block.style.height = '150px'; 
+        const content = document.createElement('div'); content.className = 'block-content bg-gif'; 
+        if (restoreData && restoreData.src) {
+           block.dataset.src = restoreData.src;
+           content.innerHTML = `<img src="${restoreData.src}" style="width:100%; height:100%; object-fit:cover; pointer-events:none;">`;
+        } else {
+           content.innerHTML = 'GIF (Pegar link)'; 
+        }
+        block.appendChild(content);
       } else if (type === 'spacer') {
         if (!restoreData) block.style.height = '30px'; const content = document.createElement('div'); content.className = 'block-content bg-spacer'; content.innerHTML = '<span style="color:#aaa; font-size:11px;">[Espacio Vacío]</span>'; block.appendChild(content);
       }
@@ -537,7 +621,6 @@
         
         row.blocks.forEach(b => {
           if (b.x > currentX) { let gap = b.x - currentX; htmlTable += `<td width="${gap}" style="font-size:1px; line-height:1px;">&nbsp;</td>`; }
-          // REESCALADO FORZADO: max-width, width exacta y altura fija para evitar desbordes por DPIs altos
           htmlTable += `<td width="${b.w}" height="${b.h}" valign="top" style="width:${b.w}px; height:${b.h}px; max-width:${b.w}px; padding:0; margin:0; overflow:hidden;">`;
           
           if (b.type === 'image' || b.type === 'gif') {
