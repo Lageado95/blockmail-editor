@@ -6,7 +6,6 @@
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; background-color: #2b2b2b; color: #fff; }
     
-    /* NUEVA BARRA SUPERIOR */
     #topbar { display: flex; align-items: center; justify-content: space-between; background-color: #1e1e1e; padding: 10px 20px; border-bottom: 1px solid #444; z-index: 10001; }
     #main-area { display: flex; flex: 1; overflow: hidden; }
     
@@ -16,14 +15,21 @@
     #sidebar { width: 320px; background-color: #1e1e1e; border-left: 1px solid #444; padding: 20px; display: flex; flex-direction: column; overflow-y: auto; z-index: 10000; }
     
     h2 { font-size: 16px; margin-top: 0; margin-bottom: 15px; color: #ccc; }
-    .tool-btn { background-color: #333; color: #fff; border: 1px solid #555; padding: 12px; margin-bottom: 10px; border-radius: 6px; cursor: pointer; text-align: left; font-size: 14px; }
+    
+    /* MEJORAS EN BOTONES PARA ICONOS PERSONALIZADOS */
+    .tool-btn { background-color: #333; color: #fff; border: 1px solid #555; padding: 10px 12px; margin-bottom: 10px; border-radius: 6px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: flex-start; transition: background 0.2s; }
     .tool-btn:hover { background-color: #444; }
+    .btn-icon { width: 18px; height: 18px; margin-right: 10px; object-fit: contain; }
+    
+    .top-btn { background-color: #e0e0e0; color: #333; border-color: #ccc; margin: 0; padding: 8px 15px; font-weight: bold; justify-content: center; }
+    .top-btn:hover { background-color: #d0d0d0; color: #000; }
+
     #properties-panel { background-color: #2a2a2a; padding: 15px; border-radius: 6px; margin-top: 20px; display: none; }
     #multi-select-msg { display: none; color: #0d99ff; font-size: 13px; text-align: center; margin-bottom: 10px; background: rgba(13, 153, 255, 0.1); padding: 8px; border-radius: 4px; }
     #single-properties { display: block; }
     
     .align-group { display: flex; gap: 5px; margin-bottom: 15px; }
-    .align-btn { flex: 1; text-align: center; padding: 8px 0; margin-bottom: 0; font-size: 16px; font-weight: bold; background-color: #111; border-color: #444; }
+    .align-btn { flex: 1; text-align: center; padding: 8px 0; margin-bottom: 0; font-size: 16px; font-weight: bold; background-color: #111; border-color: #444; justify-content: center; }
     .align-btn:hover { background-color: #333; border-color: #0d99ff; }
     .prop-row { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
     .prop-row label { font-size: 12px; color: #aaa; }
@@ -33,16 +39,22 @@
     .text-prop-box { display:flex; align-items:center; background:#111; border:1px solid #444; border-radius:4px; padding:0 5px; height: 32px; }
     .text-prop-box input { width:100%; border:none; background:transparent; color:white; outline:none; text-align:right; font-size: 13px;}
     
+    .swatch { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 1px solid #666; transition: transform 0.1s; }
+    .swatch:hover { transform: scale(1.15); border-color: #fff; }
+
     .block { position: absolute; background-color: #fff; box-sizing: border-box; min-width: 50px; min-height: 50px; cursor: grab; transition: box-shadow 0.2s, transform 0.2s; }
     .block.dragging { cursor: grabbing; z-index: 8000 !important; opacity: 0.85; box-shadow: 0 15px 30px rgba(0,0,0,0.4); transform: scale(1.02); }
     .block.selected { border: 1.5px solid #0d99ff; z-index: 50; }
     .block:not(.selected) { border: 1px dashed #ccc; }
-    .block-content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; box-sizing: border-box; color: #666; text-align: center; padding: 10px; pointer-events: none; overflow: hidden; }
+    
+    .block-content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; box-sizing: border-box; color: #666; text-align: center; padding: 10px; pointer-events: none; overflow: hidden; user-select: none; }
     .bg-image { background-color: #e0e0e0; }
     .bg-gif { background-color: #ffd1dc; }
     .bg-spacer { background: repeating-linear-gradient(45deg, #f9f9f9, #f9f9f9 10px, #ffffff 10px, #ffffff 20px); }
-    .block-text { width: 100%; height: 100%; padding: 15px; box-sizing: border-box; cursor: default; overflow: hidden; pointer-events: none; }
-    .block-text.editing { cursor: text; pointer-events: auto; outline: none; border: 1px dashed #0d99ff; }
+    
+    .block-text { width: 100%; height: 100%; padding: 15px; box-sizing: border-box; cursor: default; overflow: hidden; pointer-events: none; user-select: none; }
+    .block-text.editing { cursor: text; pointer-events: auto; outline: none; border: 1px dashed #0d99ff; user-select: text; }
+    
     .delete-btn { position: absolute; top: -12px; right: -12px; background: red; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: none; z-index: 200; pointer-events: auto; }
     .block.selected .delete-btn { display: block; }
     .resize-handle { position: absolute; width: 8px; height: 8px; background-color: #fff; border: 1px solid #0d99ff; display: none; z-index: 150; }
@@ -59,17 +71,17 @@
 </head>
 <body>
 
-  <!-- BARRA SUPERIOR -->
+  <!-- BARRA SUPERIOR CON ICONOS PERSONALIZADOS -->
   <div id="topbar">
     <div style="display:flex; align-items:center; gap: 15px;">
-      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlackMail Editor</span>
-      <label style="font-size: 13px; color: #0d99ff; font-weight: bold;">✉️ Asunto:</label>
-      <input type="text" id="email-subject" placeholder="Ej: ¡Llegaron las ofertas!" style="width: 300px; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; outline:none;">
+      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlackMail Editor <span style="font-size:12px; color:#0d99ff; font-weight:normal; margin-left:5px;">v0.2.4</span></span>
+      <label style="font-size: 13px; color: #0d99ff; font-weight: bold;">Asunto:</label>
+      <input type="text" id="email-subject" placeholder="Ej: ¡Llegaron las ofertas!" style="width: 300px; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; outline:none;" onchange="saveState()">
     </div>
     <div style="display:flex; gap:10px;">
-      <button class="tool-btn" onclick="saveProject()" style="margin:0; padding:8px 15px; background-color: #0d99ff; border-color: #007acc; font-weight:bold;">💾 Guardar</button>
-      <button class="tool-btn" onclick="triggerLoadProject()" style="margin:0; padding:8px 15px; background-color: #f39c12; border-color: #d68910; font-weight:bold;">📂 Abrir</button>
-      <button class="tool-btn" onclick="exportEML()" style="margin:0; padding:8px 15px; background-color: #1FAF38; border-color: #158a29; font-weight:bold;">📥 Exportar a .EML</button>
+      <button class="tool-btn top-btn" onclick="saveProject()"><img src="icon-save.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Guardar</button>
+      <button class="tool-btn top-btn" onclick="triggerLoadProject()"><img src="icon-open.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Abrir</button>
+      <button class="tool-btn top-btn" onclick="exportEML()"><img src="icon-export.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Exportar Mail</button>
       <input type="file" id="project-upload" accept=".bmail" style="display:none;" onchange="handleProjectUpload(event)">
     </div>
   </div>
@@ -89,10 +101,11 @@
 
     <div id="sidebar">
       <h2>Bloques</h2>
-      <button class="tool-btn" onclick="addBlock('image')">🖼️ Agregar Imagen</button>
-      <button class="tool-btn" onclick="addBlock('text')">T Agregar Texto</button>
-      <button class="tool-btn" onclick="addBlock('gif')">🎬 Agregar GIF</button>
-      <button class="tool-btn" onclick="addBlock('spacer')">⬜ Tabla Vacía (Espacio)</button>
+      <!-- BOTONES DE HERRAMIENTAS CON ICONOS PERSONALIZADOS -->
+      <button class="tool-btn" onclick="addBlock('image')"><img src="icon-image.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Agregar Imagen</button>
+      <button class="tool-btn" onclick="addBlock('text')"><img src="icon-text.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Agregar Texto</button>
+      <button class="tool-btn" onclick="addBlock('gif')"><img src="icon-gif.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Agregar GIF</button>
+      <button class="tool-btn" onclick="addBlock('spacer')"><img src="icon-spacer.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Tabla Vacía (Espacio)</button>
       
       <div id="properties-panel">
         <h2 style="margin-bottom: 10px; color: #0d99ff;">Propiedades</h2>
@@ -106,31 +119,30 @@
             <button class="tool-btn align-btn" onclick="alignBlock('right')" title="Derecha">▶|</button>
           </div>
           
-          <div class="prop-row"><label>Pos. X</label><input type="number" id="prop-x" onchange="updateSelectedBlock()"></div>
-          <div class="prop-row"><label>Pos. Y</label><input type="number" id="prop-y" onchange="updateSelectedBlock()"></div>
-          <div class="prop-row"><label>Ancho</label><input type="number" id="prop-w" onchange="updateSelectedBlock()"></div>
-          <div class="prop-row"><label>Alto</label><input type="number" id="prop-h" onchange="updateSelectedBlock()"></div>
+          <div class="prop-row"><label>Pos. X</label><input type="number" id="prop-x" oninput="updateSelectedBlock('x')" onchange="saveState()"></div>
+          <div class="prop-row"><label>Pos. Y</label><input type="number" id="prop-y" oninput="updateSelectedBlock('y')" onchange="saveState()"></div>
+          <div class="prop-row"><label>Ancho</label><input type="number" id="prop-w" oninput="updateSelectedBlock('w')" onchange="saveState()"></div>
+          <div class="prop-row"><label>Alto</label><input type="number" id="prop-h" oninput="updateSelectedBlock('h')" onchange="saveState()"></div>
           
           <div id="media-properties">
             <div id="image-props" style="display:none;">
                <label style="font-size: 12px; color: #aaa;">Archivo local (Se adjunta al mail)</label>
                <input type="file" id="image-upload" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
-               <button class="tool-btn" onclick="document.getElementById('image-upload').click()" style="width:100%; background:#1FAF38; text-align:center; margin-top:5px;">Adjuntar Imagen</button>
+               <button class="tool-btn" onclick="document.getElementById('image-upload').click()" style="width:100%; background:#1FAF38; justify-content:center; margin-top:5px;">Adjuntar Imagen</button>
             </div>
             <div id="gif-props" style="display:none;">
                <label style="font-size: 12px; color: #aaa;">Pegá acá el Embed o Link de Giphy</label>
-               <input type="text" id="gif-url" class="media-input" placeholder="Pegar código..." onchange="handleGifURL(event)">
+               <input type="text" id="gif-url" class="media-input" placeholder="Pegar código..." oninput="handleGifURL(event)" onchange="saveState()">
             </div>
-            <!-- Nuevo Vínculo a Imágenes -->
             <div style="margin-top:15px; border-top:1px solid #444; padding-top:15px;">
               <label style="font-size: 12px; color: #aaa;">Vínculo (URL) al hacer clic</label>
-              <input type="text" id="prop-href" class="media-input" placeholder="https://..." onchange="updateMediaLink()">
+              <input type="text" id="prop-href" class="media-input" placeholder="https://..." oninput="updateMediaLink()" onchange="saveState()">
             </div>
           </div>
           
           <div id="text-props">
             <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px;">Todo el Cuadro</label>
-            <select id="prop-font-family" class="media-input" style="margin-top:0;" onchange="updateTextProperties()">
+            <select id="prop-font-family" class="media-input" style="margin-top:0;" onchange="updateTextProperties(); saveState();">
               <option value="Arial, sans-serif">Arial</option>
               <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
               <option value="'Times New Roman', Times, serif">Times New Roman</option>
@@ -138,38 +150,41 @@
               <option value="'Courier New', Courier, monospace">Courier New</option>
               <option value="Verdana, sans-serif">Verdana</option>
             </select>
-            
-            <div style="display:flex; justify-content:space-between; margin-top:5px;">
-              <select id="prop-font-weight" class="media-input" style="width:65%; margin-top:0;" onchange="updateTextProperties()">
-                <option value="normal">Regular</option>
-                <option value="bold">Bold</option>
-                <option value="italic">Italic</option>
-              </select>
-              <input type="color" id="prop-text-color" title="Color de todo el cuadro" style="width:30%; height:33px; margin-top:0; background:none; border:1px solid #444; border-radius:4px; cursor:pointer;" onchange="updateTextProperties()">
-            </div>
 
             <div style="display:flex; justify-content:space-between; margin-top:10px;">
               <div class="text-prop-box" style="width:48%;" title="Tamaño de fuente (px)">
                 <span style="font-size:14px; color:#aaa; font-weight:bold; margin-right:5px;">T</span>
-                <input type="number" id="prop-font-size" onchange="updateTextProperties()">
+                <input type="number" id="prop-font-size" oninput="updateTextProperties()" onchange="saveState()">
                 <span style="font-size:10px; color:#666; margin-left:3px;">px</span>
               </div>
               <div class="text-prop-box" style="width:48%;" title="Interlineado (px)">
                 <span style="font-size:14px; color:#aaa; font-weight:bold; margin-right:5px;">↕</span>
-                <input type="number" id="prop-line-height" onchange="updateTextProperties()">
+                <input type="number" id="prop-line-height" oninput="updateTextProperties()" onchange="saveState()">
                 <span style="font-size:10px; color:#666; margin-left:3px;">px</span>
               </div>
             </div>
             
             <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px; margin-top:15px;">Solo Selección (Texto resaltado)</label>
-            <div class="align-group">
+            <div class="align-group" style="margin-bottom: 8px;">
               <button class="tool-btn align-btn" onmousedown="event.preventDefault(); inlineFormat('bold')" title="Negrita"><b>B</b></button>
               <button class="tool-btn align-btn" onmousedown="event.preventDefault(); inlineFormat('italic')" title="Cursiva"><i>I</i></button>
               <button class="tool-btn align-btn" onmousedown="event.preventDefault(); inlineFormat('underline')" title="Subrayado"><u>U</u></button>
               <input type="color" id="inline-color" title="Color Selección" style="width:25%; height:33px; margin-top:0; background:none; border:1px solid #444; border-radius:4px; cursor:pointer;" oninput="inlineFormat('foreColor', this.value)" onchange="inlineFormat('foreColor', this.value); saveState();">
             </div>
+            
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:15px; background: #111; padding: 8px; border-radius: 4px; border: 1px solid #444;">
+              <div class="swatch" style="background:#000000;" onmousedown="event.preventDefault(); inlineFormat('foreColor', '#000000');" title="Negro"></div>
+              <div class="swatch" style="background:#ffffff;" onmousedown="event.preventDefault(); inlineFormat('foreColor', '#ffffff');" title="Blanco"></div>
+              <div class="swatch" style="background:#808080;" onmousedown="event.preventDefault(); inlineFormat('foreColor', '#808080');" title="Gris"></div>
+              <div class="swatch" style="background:#e74c3c;" onmousedown="event.preventDefault(); inlineFormat('foreColor', '#e74c3c');" title="Rojo"></div>
+              <div class="swatch" style="background:#e67e22;" onmousedown="event.preventDefault(); inlineFormat('foreColor', '#e67e22');" title="Naranja"></div>
+              <div class="swatch" style="background:#f1c40f;" onmousedown="event.preventDefault(); inlineFormat('foreColor', '#f1c40f');" title="Amarillo"></div>
+              <div class="swatch" style="background:#2ecc71;" onmousedown="event.preventDefault(); inlineFormat('foreColor', '#2ecc71');" title="Verde"></div>
+              <div class="swatch" style="background:#3498db;" onmousedown="event.preventDefault(); inlineFormat('foreColor', '#3498db');" title="Azul"></div>
+              <div class="swatch" style="background:#9b59b6;" onmousedown="event.preventDefault(); inlineFormat('foreColor', '#9b59b6');" title="Violeta"></div>
+            </div>
 
-            <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px; margin-top:15px;">Alineación</label>
+            <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px;">Alineación Párrafo</label>
             <div class="align-group">
               <button class="tool-btn align-btn" onclick="updateTextAlign('left')" title="Alinear a la Izquierda" style="font-size:16px;">⫷</button>
               <button class="tool-btn align-btn" onclick="updateTextAlign('center')" title="Centrar" style="font-size:16px;">≡</button>
@@ -179,6 +194,7 @@
           </div>
         </div>
       </div>
+      <div style="font-size:10px; color:#666; text-align:center; margin-top:15px;">v0.2.4</div>
     </div>
   </div>
 
@@ -189,8 +205,10 @@
     const propertiesPanel = document.getElementById('properties-panel');
     const singleProperties = document.getElementById('single-properties');
     const multiSelectMsg = document.getElementById('multi-select-msg');
+    
     const propX = document.getElementById('prop-x'), propY = document.getElementById('prop-y');
     const propW = document.getElementById('prop-w'), propH = document.getElementById('prop-h');
+    
     const mediaProperties = document.getElementById('media-properties');
     const imageProps = document.getElementById('image-props'), gifProps = document.getElementById('gif-props');
     const gifUrlInput = document.getElementById('gif-url');
@@ -199,8 +217,6 @@
     
     const textProps = document.getElementById('text-props');
     const propFontFamily = document.getElementById('prop-font-family');
-    const propFontWeight = document.getElementById('prop-font-weight');
-    const propTextColor = document.getElementById('prop-text-color');
     const propFontSize = document.getElementById('prop-font-size');
     const propLineHeight = document.getElementById('prop-line-height');
     
@@ -208,7 +224,6 @@
     let historyArr = []; let historyIndex = -1; let isRestoring = false;
     let savedRange = null;
 
-    // Guardar selección para estilos inline
     document.addEventListener('selectionchange', () => {
       const active = document.activeElement;
       if (active && active.classList.contains('editing')) {
@@ -231,10 +246,11 @@
          }
       }
       document.execCommand(command, false, value);
-      saveState();
+      if (value !== null && document.getElementById('inline-color')) {
+        document.getElementById('inline-color').value = value;
+      }
     }
 
-    // --- CORRECCIÓN DEL HISTORIAL (20 ACCIONES Y RESTAURACIÓN) ---
     function saveState() {
       if (isRestoring) return;
       historyArr = historyArr.slice(0, historyIndex + 1);
@@ -246,11 +262,7 @@
         selected: b.classList.contains('selected')
       }));
       historyArr.push(currentState);
-      if (historyArr.length > 20) {
-        historyArr.shift(); // Tope de 20 movimientos
-      } else {
-        historyIndex++;
-      }
+      if (historyArr.length > 20) { historyArr.shift(); } else { historyIndex++; }
     }
 
     function undo() { if (historyIndex > 0) { historyIndex--; loadState(historyArr[historyIndex]); } }
@@ -263,13 +275,6 @@
     }
     window.onload = function() { saveState(); }
 
-    function rgbToHex(rgb) {
-      if (!rgb || rgb.startsWith('#')) return rgb || '#000000';
-      let m = rgb.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
-      if (m) return "#" + ("0" + parseInt(m[1],10).toString(16)).slice(-2) + ("0" + parseInt(m[2],10).toString(16)).slice(-2) + ("0" + parseInt(m[3],10).toString(16)).slice(-2);
-      return '#000000'; 
-    }
-
     function updateCanvasHeight() {
       let maxBottom = 800; document.querySelectorAll('.block').forEach(block => { let bottom = parseInt(block.style.top || 0) + block.offsetHeight; if (bottom > maxBottom) maxBottom = bottom; });
       canvas.style.height = (maxBottom + 200) + 'px'; 
@@ -278,24 +283,15 @@
 
     function updateMultiSelectionBoundingBox() {
       if (selectedBlocks.size <= 1) {
-        multiSelectionBox.style.display = 'none';
-        document.body.classList.remove('multi-selection-active');
-        return;
+        multiSelectionBox.style.display = 'none'; document.body.classList.remove('multi-selection-active'); return;
       }
       let minX = Infinity, minY = Infinity, maxX = 0, maxY = 0;
       selectedBlocks.forEach(b => {
-        let l = parseInt(b.style.left || 0), t = parseInt(b.style.top || 0);
-        let r = l + b.offsetWidth, bot = t + b.offsetHeight;
-        if (l < minX) minX = l;
-        if (t < minY) minY = t;
-        if (r > maxX) maxX = r;
-        if (bot > maxY) maxY = bot;
+        let l = parseInt(b.style.left || 0), t = parseInt(b.style.top || 0); let r = l + b.offsetWidth, bot = t + b.offsetHeight;
+        if (l < minX) minX = l; if (t < minY) minY = t; if (r > maxX) maxX = r; if (bot > maxY) maxY = bot;
       });
-      multiSelectionBox.style.display = 'block';
-      multiSelectionBox.style.left = minX + 'px';
-      multiSelectionBox.style.top = minY + 'px';
-      multiSelectionBox.style.width = (maxX - minX) + 'px';
-      multiSelectionBox.style.height = (maxY - minY) + 'px';
+      multiSelectionBox.style.display = 'block'; multiSelectionBox.style.left = minX + 'px'; multiSelectionBox.style.top = minY + 'px';
+      multiSelectionBox.style.width = (maxX - minX) + 'px'; multiSelectionBox.style.height = (maxY - minY) + 'px';
       document.body.classList.add('multi-selection-active');
     }
 
@@ -318,29 +314,43 @@
         if (type === 'image' || type === 'gif') {
           mediaProperties.style.display = 'block'; textProps.style.display = 'none'; imageProps.style.display = (type === 'image') ? 'block' : 'none'; gifProps.style.display = (type === 'gif') ? 'block' : 'none';
           if (type === 'gif') gifUrlInput.value = block.dataset.src || '';
-          propHref.value = block.dataset.href || ''; // Carga vínculo de imagen
+          propHref.value = block.dataset.href || '';
         } else if (type === 'text') {
           mediaProperties.style.display = 'none'; textProps.style.display = 'block'; let tEl = block.querySelector('.block-text');
           propFontFamily.value = tEl.style.fontFamily.replace(/"/g, '') || 'Arial, sans-serif';
-          if (tEl.style.fontWeight === 'bold' || tEl.style.fontWeight === '700') propFontWeight.value = 'bold'; else if (tEl.style.fontStyle === 'italic') propFontWeight.value = 'italic'; else propFontWeight.value = 'normal';
-          propFontSize.value = parseInt(tEl.style.fontSize) || 14; propLineHeight.value = parseInt(tEl.style.lineHeight) || 20; propTextColor.value = rgbToHex(tEl.style.color);
+          propFontSize.value = parseInt(tEl.style.fontSize) || 14; propLineHeight.value = parseInt(tEl.style.lineHeight) || 20;
         } else if (type === 'spacer') {
           mediaProperties.style.display = 'none'; textProps.style.display = 'none';
         }
       } else { propertiesPanel.style.display = 'block'; multiSelectMsg.style.display = 'block'; singleProperties.style.display = 'none'; document.body.classList.remove('single-selection'); }
     }
 
-    function updateSelectedBlock() {
-      if (selectedBlocks.size !== 1) return; let block = Array.from(selectedBlocks)[0]; let newW = parseInt(propW.value), newX = parseInt(propX.value);
-      if (newW > 850) newW = 850; if (newX + newW > 850) newX = 850 - newW; if (newX < 0) newX = 0;
-      block.style.width = newW + 'px'; block.style.height = propH.value + 'px'; block.style.left = newX + 'px'; block.style.top = propY.value + 'px'; updateCanvasHeight(); saveState();
+    function updateSelectedBlock(source) {
+      if (selectedBlocks.size !== 1) return; 
+      let block = Array.from(selectedBlocks)[0]; 
+      
+      let oldW = block.offsetWidth; let oldH = block.offsetHeight;
+      let oldX = parseInt(block.style.left || 0); let oldY = parseInt(block.style.top || 0);
+
+      let newW = parseInt(propW.value) || 20; 
+      let newX = parseInt(propX.value) || 0; 
+      let newY = parseInt(propY.value) || 0;
+      let newH = parseInt(propH.value) || 20;
+
+      if (source === 'w') { newX = oldX - (newW - oldW) / 2; propX.value = Math.round(newX); }
+      if (source === 'h') { newY = oldY - (newH - oldH) / 2; propY.value = Math.round(newY); }
+
+      if (newW > 850) newW = 850; 
+      if (newX + newW > 850) newX = 850 - newW; 
+      if (newX < 0) newX = 0; if (newY < 0) newY = 0;
+      
+      block.style.width = newW + 'px'; block.style.height = newH + 'px'; block.style.left = newX + 'px'; block.style.top = newY + 'px'; 
+      updateCanvasHeight(); 
     }
 
     function updateMediaLink() {
-      if (selectedBlocks.size !== 1) return;
-      let block = Array.from(selectedBlocks)[0];
+      if (selectedBlocks.size !== 1) return; let block = Array.from(selectedBlocks)[0];
       block.dataset.href = propHref.value.trim();
-      saveState();
     }
 
     function alignBlock(alignment) {
@@ -351,9 +361,7 @@
 
     function updateTextProperties() {
       if (selectedBlocks.size !== 1) return; let block = Array.from(selectedBlocks)[0]; if (block.dataset.type !== 'text') return; let tEl = block.querySelector('.block-text');
-      tEl.style.fontFamily = propFontFamily.value; tEl.style.fontSize = propFontSize.value + 'px'; tEl.style.lineHeight = propLineHeight.value + 'px'; tEl.style.color = propTextColor.value;
-      if (propFontWeight.value === 'bold') { tEl.style.fontWeight = 'bold'; tEl.style.fontStyle = 'normal'; } else if (propFontWeight.value === 'italic') { tEl.style.fontWeight = 'normal'; tEl.style.fontStyle = 'italic'; } else { tEl.style.fontWeight = 'normal'; tEl.style.fontStyle = 'normal'; }
-      saveState();
+      tEl.style.fontFamily = propFontFamily.value; tEl.style.fontSize = propFontSize.value + 'px'; tEl.style.lineHeight = propLineHeight.value + 'px';
     }
 
     function updateTextAlign(align) { if (selectedBlocks.size === 0) return; selectedBlocks.forEach(block => { if (block.dataset.type === 'text') { block.querySelector('.block-text').style.textAlign = align; } }); saveState(); }
@@ -430,15 +438,14 @@
     });
 
     function checkOverlap(rect1, rect2) { return (rect1.left < rect2.right && rect1.right > rect2.left && rect1.top < rect2.bottom && rect1.bottom > rect2.top); }
-    function handleImageUpload(e) { const file = e.target.files[0]; if (!file || selectedBlocks.size !== 1) return; let block = Array.from(selectedBlocks)[0]; const reader = new FileReader(); reader.onload = function(event) { const base64 = event.target.result; block.dataset.src = base64; block.querySelector('.block-content').innerHTML = `<img src="${base64}" style="width:100%; height:100%; object-fit:cover; pointer-events:none;">`; saveState(); }; reader.readAsDataURL(file); }
+    function handleImageUpload(e) { const file = e.target.files[0]; if (!file || selectedBlocks.size !== 1) return; let block = Array.from(selectedBlocks)[0]; const reader = new FileReader(); reader.onload = function(event) { const base64 = event.target.result; block.dataset.src = base64; block.querySelector('.block-content').innerHTML = `<img src="${base64}" style="width:100%; height:100%; object-fit:cover; pointer-events:none;">`; saveState(); }; reader.readAsDataURL(file); e.target.value = '';}
     function handleGifURL(e) {
       let url = e.target.value.trim(); if (selectedBlocks.size !== 1) return; let block = Array.from(selectedBlocks)[0];
       if (url.includes('<iframe')) { const match = url.match(/src="([^"]+)"/); if (match && match[1]) { let embedUrl = match[1]; let parts = embedUrl.split('/'); let id = parts[parts.length - 1]; url = `https://media.giphy.com/media/${id}/giphy.gif`; } } else if (url.includes('giphy.com/gifs/')) { const parts = url.split('-'); const id = parts[parts.length - 1]; url = `https://media.giphy.com/media/${id}/giphy.gif`; }
-      e.target.value = url; block.dataset.src = url; block.querySelector('.block-content').innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover; pointer-events:none;">`; saveState();
+      e.target.value = url; block.dataset.src = url; block.querySelector('.block-content').innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover; pointer-events:none;">`; 
     }
     function getLowestPoint() { let lowestY = 0; document.querySelectorAll('.block').forEach(block => { let bottomEdge = parseInt(block.style.top || 0) + block.offsetHeight; if (bottomEdge > lowestY) lowestY = bottomEdge; }); return lowestY; }
 
-    // --- CORRECCIÓN EN ADDBLOCK PARA RESTAURAR BIEN ---
     function addBlock(type, restoreData = null) {
       const block = document.createElement('div'); block.className = 'block'; block.dataset.type = type; 
       if (restoreData) { 
@@ -510,6 +517,9 @@
 
       block.addEventListener('mousedown', function(e) {
         const textEdit = block.querySelector('.block-text'); if (textEdit && textEdit.classList.contains('editing')) return;
+        
+        if (textEdit && !textEdit.classList.contains('editing')) { e.preventDefault(); }
+
         if (e.target !== deleteBtn && !e.target.classList.contains('resize-handle')) {
           e.stopPropagation(); document.body.style.userSelect = 'none'; 
           if (e.shiftKey) { if (selectedBlocks.has(block)) { removeFromSelection(block); return; } else { addToSelection(block); } } else { if (!selectedBlocks.has(block)) { clearSelection(); addToSelection(block); } }
@@ -629,7 +639,8 @@
 
       htmlTable += `</table>`;
       const boundary = "----=_NextPart_" + Math.random().toString(16).slice(2);
-      let eml = `To: destinatario@ejemplo.com\r\nSubject: ${subjectStr}\r\nX-Unsent: 1\r\nMIME-Version: 1.0\r\nContent-Type: multipart/related; boundary="${boundary}"\r\n\r\n--${boundary}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n<!DOCTYPE html><html><body style="margin:0; padding:20px; background-color:#f4f4f4;">\r\n${htmlTable}\r\n</body></html>\r\n\r\n`;
+      
+      let eml = `To: destinatario@ejemplo.com\r\nSubject: ${subjectStr}\r\nX-Unsent: 1\r\nMIME-Version: 1.0\r\nContent-Type: multipart/related; boundary="${boundary}"\r\n\r\n--${boundary}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n<!DOCTYPE html><html><body style="margin:0; padding:20px; background-color:#ffffff;">\r\n${htmlTable}\r\n</body></html>\r\n\r\n`;
       attachments.forEach(att => { eml += `--${boundary}\r\nContent-Type: ${att.mimeType}\r\nContent-Transfer-Encoding: base64\r\nContent-ID: <${att.cid}>\r\n\r\n${att.base64Data}\r\n\r\n`; });
       eml += `--${boundary}--\r\n`;
       const blob = new Blob([eml], { type: 'message/rfc822' }); const url = URL.createObjectURL(blob);
