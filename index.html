@@ -41,7 +41,6 @@
     .swatch { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 1px solid #666; transition: transform 0.1s; }
     .swatch:hover { transform: scale(1.15); border-color: #fff; }
 
-    /* CSS AJUSTADO: Bajamos el min-height a 10px para permitir spacers chiquitos */
     .block { position: absolute; background-color: #fff; box-sizing: border-box; min-width: 20px; min-height: 10px; cursor: grab; transition: box-shadow 0.2s, transform 0.2s; }
     .block.dragging { cursor: grabbing; z-index: 8000 !important; opacity: 0.85; box-shadow: 0 15px 30px rgba(0,0,0,0.4); transform: scale(1.02); }
     .block.selected { border: 1.5px solid #0d99ff; z-index: 50; }
@@ -52,7 +51,7 @@
     .bg-gif { background-color: #ffd1dc; }
     .bg-spacer { background: repeating-linear-gradient(45deg, #f9f9f9, #f9f9f9 10px, #ffffff 10px, #ffffff 20px); }
     
-    .block-text { width: 100%; height: 100%; padding: 15px; box-sizing: border-box; cursor: default; overflow: hidden; pointer-events: none; user-select: none; }
+    .block-text { width: 100%; height: 100%; box-sizing: border-box; cursor: default; overflow: hidden; pointer-events: none; user-select: none; }
     .block-text.editing { cursor: text; pointer-events: auto; outline: none; border: 1px dashed #0d99ff; user-select: text; }
     
     .delete-btn { position: absolute; top: -12px; right: -12px; background: red; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: none; z-index: 200; pointer-events: auto; }
@@ -73,7 +72,7 @@
 
   <div id="topbar">
     <div style="display:flex; align-items:center; gap: 15px;">
-      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlackMail Editor <span style="font-size:12px; color:#0d99ff; font-weight:normal; margin-left:5px;">v0.2.5</span></span>
+      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlackMail Editor <span style="font-size:12px; color:#0d99ff; font-weight:normal; margin-left:5px;">v0.2.6</span></span>
       <label style="font-size: 13px; color: #0d99ff; font-weight: bold;">Asunto:</label>
       <input type="text" id="email-subject" placeholder="Ej: ¡Llegaron las ofertas!" style="width: 300px; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; outline:none;" onchange="saveState()">
     </div>
@@ -161,6 +160,20 @@
                 <span style="font-size:10px; color:#666; margin-left:3px;">px</span>
               </div>
             </div>
+
+            <!-- NUEVO: Controles de Espaciado (Padding) Manual -->
+            <div style="display:flex; justify-content:space-between; margin-top:5px;">
+              <div class="text-prop-box" style="width:48%;" title="Espacio Superior (px)">
+                <span style="font-size:14px; color:#aaa; font-weight:bold; margin-right:5px;">↧</span>
+                <input type="number" id="prop-padding-top" oninput="updateTextProperties()" onchange="saveState()">
+                <span style="font-size:10px; color:#666; margin-left:3px;">px</span>
+              </div>
+              <div class="text-prop-box" style="width:48%;" title="Espacio Lados (px)">
+                <span style="font-size:14px; color:#aaa; font-weight:bold; margin-right:5px;">↔</span>
+                <input type="number" id="prop-padding-sides" oninput="updateTextProperties()" onchange="saveState()">
+                <span style="font-size:10px; color:#666; margin-left:3px;">px</span>
+              </div>
+            </div>
             
             <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px; margin-top:15px;">Solo Selección (Texto resaltado)</label>
             <div class="align-group" style="margin-bottom: 8px;">
@@ -170,10 +183,10 @@
               <input type="color" id="inline-color" title="Color Selección" style="width:25%; height:33px; margin-top:0; background:none; border:1px solid #444; border-radius:4px; cursor:pointer;" oninput="inlineFormat('foreColor', this.value)" onchange="inlineFormat('foreColor', this.value); saveState();">
             </div>
             
+            <!-- CONTENEDOR DE PALETA PRINCIPAL -->
             <div id="palette-container" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:5px; background: #111; padding: 8px; border-radius: 4px; border: 1px solid #444;"></div>
             
-            <div id="ase-palettes-container"></div>
-
+            <!-- BOTONES DE AÑADIR (Fijos arriba de las .ase) -->
             <div style="display:flex; gap: 5px; margin-bottom: 5px;">
               <input type="color" id="new-color-picker" style="width:28px; height:28px; padding:0; border:none; cursor:pointer; background:transparent;" title="Elegir nuevo color">
               <button class="tool-btn" style="margin:0; padding:4px 8px; flex:1; justify-content:center;" onclick="addCustomColor()">+ Añadir</button>
@@ -182,6 +195,18 @@
             </div>
             <div style="font-size:10px; color:#888; text-align:center; margin-bottom:15px; font-style:italic;">(Clic derecho para eliminar un color)</div>
 
+            <!-- CONTENEDOR DE CARPETAS .ASE -->
+            <div id="ase-palettes-container"></div>
+
+            <!-- NUEVO: Alineación Vertical -->
+            <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px;">Alineación Vertical</label>
+            <div class="align-group" style="margin-bottom: 10px;">
+              <button class="tool-btn align-btn" onclick="updateTextVAlign('flex-start')" title="Pegado Arriba">⇧</button>
+              <button class="tool-btn align-btn" onclick="updateTextVAlign('center')" title="Centrado al medio">⇕</button>
+              <button class="tool-btn align-btn" onclick="updateTextVAlign('flex-end')" title="Pegado Abajo">⇩</button>
+            </div>
+
+            <!-- Alineación Horizontal -->
             <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px;">Alineación Párrafo</label>
             <div class="align-group">
               <button class="tool-btn align-btn" onclick="updateTextAlign('left')" title="Alinear a la Izquierda" style="font-size:16px;">⫷</button>
@@ -192,7 +217,7 @@
           </div>
         </div>
       </div>
-      <div style="font-size:10px; color:#666; text-align:center; margin-top:15px;">v0.2.5</div>
+      <div style="font-size:10px; color:#666; text-align:center; margin-top:15px;">v0.2.6</div>
     </div>
   </div>
 
@@ -217,6 +242,8 @@
     const propFontFamily = document.getElementById('prop-font-family');
     const propFontSize = document.getElementById('prop-font-size');
     const propLineHeight = document.getElementById('prop-line-height');
+    const propPaddingTop = document.getElementById('prop-padding-top');
+    const propPaddingSides = document.getElementById('prop-padding-sides');
     
     let selectedBlocks = new Set(); let clipboard = []; const SNAP_DIST = 10; 
     let historyArr = []; let historyIndex = -1; let isRestoring = false;
@@ -467,6 +494,8 @@
           mediaProperties.style.display = 'none'; textProps.style.display = 'block'; let tEl = block.querySelector('.block-text');
           propFontFamily.value = tEl.style.fontFamily.replace(/"/g, '') || 'Arial, sans-serif';
           propFontSize.value = parseInt(tEl.style.fontSize) || 14; propLineHeight.value = parseInt(tEl.style.lineHeight) || 20;
+          propPaddingTop.value = parseInt(tEl.style.paddingTop) || 0;
+          propPaddingSides.value = parseInt(tEl.style.paddingLeft) || 0;
         } else if (type === 'spacer') {
           mediaProperties.style.display = 'none'; textProps.style.display = 'none';
         }
@@ -514,9 +543,23 @@
     function updateTextProperties() {
       if (selectedBlocks.size !== 1) return; let block = Array.from(selectedBlocks)[0]; if (block.dataset.type !== 'text') return; let tEl = block.querySelector('.block-text');
       tEl.style.fontFamily = propFontFamily.value; tEl.style.fontSize = propFontSize.value + 'px'; tEl.style.lineHeight = propLineHeight.value + 'px';
+      tEl.style.paddingTop = propPaddingTop.value + 'px'; tEl.style.paddingLeft = propPaddingSides.value + 'px'; tEl.style.paddingRight = propPaddingSides.value + 'px';
     }
 
     function updateTextAlign(align) { if (selectedBlocks.size === 0) return; selectedBlocks.forEach(block => { if (block.dataset.type === 'text') { block.querySelector('.block-text').style.textAlign = align; } }); saveState(); }
+
+    function updateTextVAlign(align) { 
+      if (selectedBlocks.size === 0) return; 
+      selectedBlocks.forEach(block => { 
+        if (block.dataset.type === 'text') { 
+          let tEl = block.querySelector('.block-text'); 
+          tEl.style.display = 'flex'; 
+          tEl.style.flexDirection = 'column'; 
+          tEl.style.justifyContent = align; 
+        } 
+      }); 
+      saveState(); 
+    }
 
     document.addEventListener('keydown', function(e) {
       if (document.activeElement.isContentEditable || document.activeElement.tagName === 'INPUT') return;
@@ -633,7 +676,9 @@
            content.style.cssText = restoreData.css; content.innerHTML = restoredHtml;
         } else { 
            content.style.fontFamily = 'Arial, sans-serif'; content.style.fontSize = '14px'; content.style.lineHeight = '20px'; content.style.color = '#000000'; content.style.textAlign = 'left'; content.style.fontWeight = 'normal'; content.style.fontStyle = 'normal'; 
-           content.innerHTML = '<div style="text-align:center; padding-top:10px;"><img src="icon-text.png" style="width:35px; opacity:0.25; filter: invert(1); pointer-events:none; user-select:none;"></div>'; 
+           content.style.display = 'flex'; content.style.flexDirection = 'column'; content.style.justifyContent = 'flex-start';
+           content.style.paddingTop = '10px'; content.style.paddingBottom = '10px'; content.style.paddingLeft = '15px'; content.style.paddingRight = '15px';
+           content.innerHTML = '<div style="text-align:center;"><img src="icon-text.png" style="width:35px; opacity:0.25; filter: invert(1); pointer-events:none; user-select:none;"></div>'; 
         }
         block.addEventListener('dblclick', function(e) { 
            if (selectedBlocks.size === 1) { 
@@ -647,7 +692,7 @@
            content.contentEditable = false; 
            content.classList.remove('editing'); 
            if (content.innerHTML.trim() === '' || content.innerHTML === '<br>') {
-               content.innerHTML = '<div style="text-align:center; padding-top:10px;"><img src="icon-text.png" style="width:35px; opacity:0.25; filter: invert(1); pointer-events:none; user-select:none;"></div>';
+               content.innerHTML = '<div style="text-align:center;"><img src="icon-text.png" style="width:35px; opacity:0.25; filter: invert(1); pointer-events:none; user-select:none;"></div>';
            }
            saveState(); 
         }); 
@@ -796,7 +841,12 @@
         
         row.blocks.forEach(b => {
           if (b.x > currentX) { let gap = b.x - currentX; htmlTable += `<td width="${gap}" style="font-size:1px; line-height:1px;">&nbsp;</td>`; }
-          htmlTable += `<td width="${b.w}" height="${b.h}" valign="top" style="width:${b.w}px; height:${b.h}px; max-width:${b.w}px; padding:0; margin:0; overflow:hidden;">`;
+          
+          let vAlign = 'top';
+          if (b.css && b.css.includes('justify-content: center')) vAlign = 'middle';
+          if (b.css && b.css.includes('justify-content: flex-end')) vAlign = 'bottom';
+
+          htmlTable += `<td width="${b.w}" height="${b.h}" valign="${vAlign}" style="width:${b.w}px; height:${b.h}px; max-width:${b.w}px; padding:0; margin:0; overflow:hidden;">`;
           
           if (b.type === 'image' || b.type === 'gif') {
             let imgTag = '';
@@ -810,7 +860,7 @@
             }
             if (b.href) htmlTable += `<a href="${b.href}" target="_blank" style="text-decoration:none;">${imgTag}</a>`; else htmlTable += imgTag;
           } else if (b.type === 'text') {
-            htmlTable += `<div style="${b.css}; padding:15px; box-sizing:border-box; margin:0; max-width:${b.w}px;">${b.html}</div>`;
+            htmlTable += `<div style="${b.css}; box-sizing:border-box; margin:0; max-width:${b.w}px; height:100%; display:block;">${b.html}</div>`;
           } else if (b.type === 'spacer') {
             htmlTable += `<div style="width:${b.w}px; height:${b.h}px; font-size:1px; line-height:1px; background-color:transparent;">&nbsp;</div>`;
           }
