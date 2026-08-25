@@ -72,7 +72,7 @@
 
   <div id="topbar">
     <div style="display:flex; align-items:center; gap: 15px;">
-      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlackMail Editor <span style="font-size:12px; color:#0d99ff; font-weight:normal; margin-left:5px;">v0.2.6</span></span>
+      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlackMail Editor <span style="font-size:12px; color:#0d99ff; font-weight:normal; margin-left:5px;">v0.2.7</span></span>
       <label style="font-size: 13px; color: #0d99ff; font-weight: bold;">Asunto:</label>
       <input type="text" id="email-subject" placeholder="Ej: ¡Llegaron las ofertas!" style="width: 300px; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; outline:none;" onchange="saveState()">
     </div>
@@ -161,7 +161,6 @@
               </div>
             </div>
 
-            <!-- NUEVO: Controles de Espaciado (Padding) Manual -->
             <div style="display:flex; justify-content:space-between; margin-top:5px;">
               <div class="text-prop-box" style="width:48%;" title="Espacio Superior (px)">
                 <span style="font-size:14px; color:#aaa; font-weight:bold; margin-right:5px;">↧</span>
@@ -183,10 +182,8 @@
               <input type="color" id="inline-color" title="Color Selección" style="width:25%; height:33px; margin-top:0; background:none; border:1px solid #444; border-radius:4px; cursor:pointer;" oninput="inlineFormat('foreColor', this.value)" onchange="inlineFormat('foreColor', this.value); saveState();">
             </div>
             
-            <!-- CONTENEDOR DE PALETA PRINCIPAL -->
             <div id="palette-container" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:5px; background: #111; padding: 8px; border-radius: 4px; border: 1px solid #444;"></div>
             
-            <!-- BOTONES DE AÑADIR (Fijos arriba de las .ase) -->
             <div style="display:flex; gap: 5px; margin-bottom: 5px;">
               <input type="color" id="new-color-picker" style="width:28px; height:28px; padding:0; border:none; cursor:pointer; background:transparent;" title="Elegir nuevo color">
               <button class="tool-btn" style="margin:0; padding:4px 8px; flex:1; justify-content:center;" onclick="addCustomColor()">+ Añadir</button>
@@ -195,10 +192,8 @@
             </div>
             <div style="font-size:10px; color:#888; text-align:center; margin-bottom:15px; font-style:italic;">(Clic derecho para eliminar un color)</div>
 
-            <!-- CONTENEDOR DE CARPETAS .ASE -->
             <div id="ase-palettes-container"></div>
 
-            <!-- NUEVO: Alineación Vertical -->
             <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px;">Alineación Vertical</label>
             <div class="align-group" style="margin-bottom: 10px;">
               <button class="tool-btn align-btn" onclick="updateTextVAlign('flex-start')" title="Pegado Arriba">⇧</button>
@@ -206,7 +201,6 @@
               <button class="tool-btn align-btn" onclick="updateTextVAlign('flex-end')" title="Pegado Abajo">⇩</button>
             </div>
 
-            <!-- Alineación Horizontal -->
             <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px;">Alineación Párrafo</label>
             <div class="align-group">
               <button class="tool-btn align-btn" onclick="updateTextAlign('left')" title="Alinear a la Izquierda" style="font-size:16px;">⫷</button>
@@ -217,7 +211,7 @@
           </div>
         </div>
       </div>
-      <div style="font-size:10px; color:#666; text-align:center; margin-top:15px;">v0.2.6</div>
+      <div style="font-size:10px; color:#666; text-align:center; margin-top:15px;">v0.2.7</div>
     </div>
   </div>
 
@@ -735,7 +729,7 @@
             for (let other of otherBlocks) { let oRect = { left: parseInt(other.style.left || 0), top: parseInt(other.style.top || 0), right: parseInt(other.style.left || 0) + other.offsetWidth, bottom: parseInt(other.style.top || 0) + other.offsetHeight }; if (checkOverlap(testRect, oRect)) { collision = true; break; } }
             if (!collision) { block.style.width = newW + 'px'; block.style.height = newH + 'px'; block.style.left = newL + 'px'; block.style.top = newT + 'px'; updatePropertiesUI(); updateMultiSelectionBoundingBox(); }
           }
-          function onMouseUp() { document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); updateCanvasHeight(); updateMultiSelectionBoundingBox(); saveState(); }
+          function onMouseUp() { document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); updateCanvasHeight(); saveState(); }
           document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp);
         });
         block.appendChild(handle);
@@ -806,6 +800,7 @@
       }; reader.readAsText(file); e.target.value = ""; 
     }
 
+    // --- NUEVO MOTOR DE EXPORTACION DE ALTA PRECISION ---
     function exportEML() {
       clearSelection();
       let subjectStr = subjectInput.value.trim(); if (!subjectStr) subjectStr = "Mi Nuevo Newsletter";
@@ -818,64 +813,110 @@
         return { type: b.dataset.type, x: parseInt(b.style.left || 0), y: parseInt(b.style.top || 0), w: b.offsetWidth, h: b.offsetHeight, src: b.dataset.src || '', href: b.dataset.href || '', html: htmlContent, css: tEl ? tEl.style.cssText : '' };
       });
       if (blocks.length === 0) { alert("El lienzo está vacío. Agregá algo antes de exportar."); return; }
+      
+      // Agrupamos en filas de manera estricta
       blocks.sort((a, b) => a.y - b.y || a.x - b.x);
-
       let rows = []; let currentRow = null;
       blocks.forEach(b => {
         if (!currentRow) { currentRow = { top: b.y, bottom: b.y + b.h, blocks: [b] }; } 
         else {
-          if (b.y < currentRow.bottom) { currentRow.blocks.push(b); if (b.y + b.h > currentRow.bottom) currentRow.bottom = b.y + b.h; } 
-          else { rows.push(currentRow); currentRow = { top: b.y, bottom: b.y + b.h, blocks: [b] }; }
+          if (b.y < currentRow.bottom) { 
+             currentRow.blocks.push(b); 
+             if (b.y + b.h > currentRow.bottom) currentRow.bottom = b.y + b.h; 
+          } else { 
+             rows.push(currentRow); currentRow = { top: b.y, bottom: b.y + b.h, blocks: [b] }; 
+          }
         }
       });
       if (currentRow) rows.push(currentRow);
 
       let attachments = [];
-      let htmlTable = `<table width="850" cellpadding="0" cellspacing="0" border="0" align="center" style="background-color:#ffffff; width:850px; max-width:850px; margin: 0 auto; border-collapse: collapse;">`;
-      let currentY = 0;
+      
+      // Wrapper global centrado, blanco puro
+      let htmlTable = `<!-- Wrapper global -->
+<table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="width:100%; background-color:#ffffff; margin:0; padding:0;">
+  <tr>
+    <td align="center" valign="top" style="padding: 20px 0;">
+      <!-- Estructura principal -->
+      <table width="850" cellpadding="0" cellspacing="0" border="0" align="center" style="width:850px; max-width:850px; background-color:#ffffff; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; margin:0 auto;">`;
 
+      let currentY = 0;
       rows.forEach(row => {
-        if (row.top > currentY) { let gap = row.top - currentY; htmlTable += `<tr><td height="${gap}" style="font-size:1px; line-height:1px;">&nbsp;</td></tr>`; }
-        htmlTable += `<tr><td><table width="850" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;"><tr>`;
-        row.blocks.sort((a, b) => a.x - b.x); let currentX = 0;
+        // Agregamos gap vertical si la fila arranca mas abajo que el final de la anterior
+        if (row.top > currentY) { 
+           let gap = row.top - currentY; 
+           htmlTable += `<tr><td width="850" height="${gap}" style="width:850px; height:${gap}px; font-size:1px; line-height:1px; padding:0; margin:0;">&nbsp;</td></tr>`; 
+        }
+        
+        htmlTable += `<tr><td width="850" style="width:850px; padding:0; margin:0;">
+          <!-- Fila independiente para proteger las columnas -->
+          <table width="850" cellpadding="0" cellspacing="0" border="0" style="width:850px; max-width:850px; table-layout:fixed; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt;">
+            <tr>`;
+            
+        row.blocks.sort((a, b) => a.x - b.x); 
+        let currentX = 0;
         
         row.blocks.forEach(b => {
-          if (b.x > currentX) { let gap = b.x - currentX; htmlTable += `<td width="${gap}" style="font-size:1px; line-height:1px;">&nbsp;</td>`; }
+          let startX = Math.max(currentX, b.x);
           
-          let vAlign = 'top';
-          if (b.css && b.css.includes('justify-content: center')) vAlign = 'middle';
-          if (b.css && b.css.includes('justify-content: flex-end')) vAlign = 'bottom';
-
-          htmlTable += `<td width="${b.w}" height="${b.h}" valign="${vAlign}" style="width:${b.w}px; height:${b.h}px; max-width:${b.w}px; padding:0; margin:0; overflow:hidden;">`;
-          
-          if (b.type === 'image' || b.type === 'gif') {
-            let imgTag = '';
-            if (b.src && b.src.startsWith('data:image')) {
-                let cid = 'img_' + attachments.length + '@newsletter'; let mimeType = b.src.split(';')[0].split(':')[1]; let base64Data = b.src.split(',')[1]; attachments.push({ cid, mimeType, base64Data });
-                imgTag = `<img src="cid:${cid}" width="${b.w}" height="${b.h}" style="display:block; width:${b.w}px; height:${b.h}px; max-width:${b.w}px; border:0; outline:none; text-decoration:none; object-fit:cover;" />`;
-            } else if (b.src) { 
-                imgTag = `<img src="${b.src}" width="${b.w}" height="${b.h}" style="display:block; width:${b.w}px; height:${b.h}px; max-width:${b.w}px; border:0; outline:none; text-decoration:none; object-fit:cover;" />`; 
-            } else { 
-                imgTag = `<div style="width:${b.w}px; height:${b.h}px; background:#e0e0e0;"></div>`; 
-            }
-            if (b.href) htmlTable += `<a href="${b.href}" target="_blank" style="text-decoration:none;">${imgTag}</a>`; else htmlTable += imgTag;
-          } else if (b.type === 'text') {
-            htmlTable += `<div style="${b.css}; box-sizing:border-box; margin:0; max-width:${b.w}px; height:100%; display:block;">${b.html}</div>`;
-          } else if (b.type === 'spacer') {
-            htmlTable += `<div style="width:${b.w}px; height:${b.h}px; font-size:1px; line-height:1px; background-color:transparent;">&nbsp;</div>`;
+          if (startX > currentX) { 
+             let gap = startX - currentX; 
+             htmlTable += `<td width="${gap}" style="width:${gap}px; min-width:${gap}px; font-size:1px; line-height:1px; padding:0; margin:0; mso-line-height-rule:exactly;">&nbsp;</td>`; 
           }
           
-          htmlTable += `</td>`; currentX = b.x + b.w;
+          let safeW = b.w - (startX - b.x);
+          if (safeW < 0) safeW = 0;
+          if (startX + safeW > 850) safeW = 850 - startX;
+          
+          if (safeW > 0) {
+             let yOffset = b.y - row.top; // Este offset perfecto arregla el posicionamiento en Y sin romper la fila
+             let vAlignHtml = 'top';
+             if (b.css && b.css.includes('justify-content: center')) vAlignHtml = 'middle';
+             if (b.css && b.css.includes('justify-content: flex-end')) vAlignHtml = 'bottom';
+             
+             htmlTable += `<td width="${safeW}" valign="top" style="width:${safeW}px; max-width:${safeW}px; padding:0; padding-top:${yOffset}px; margin:0;">`;
+             
+             // Tabla interna para forzar el valign del texto sin romper Outlook
+             htmlTable += `<table width="100%" height="${b.h}" cellpadding="0" cellspacing="0" border="0" style="height:${b.h}px; max-height:${b.h}px; width:100%; border-collapse:collapse;"><tr><td valign="${vAlignHtml}" style="height:${b.h}px; padding:0; margin:0;">`;
+             
+             if (b.type === 'image' || b.type === 'gif') {
+                let imgTag = '';
+                if (b.src && b.src.startsWith('data:image')) {
+                    let cid = 'img_' + attachments.length + '@newsletter'; let mimeType = b.src.split(';')[0].split(':')[1]; let base64Data = b.src.split(',')[1]; attachments.push({ cid, mimeType, base64Data });
+                    imgTag = `<img src="cid:${cid}" width="${safeW}" height="${b.h}" style="display:block; width:${safeW}px; height:${b.h}px; border:0; outline:none; text-decoration:none;" />`;
+                } else if (b.src) { 
+                    imgTag = `<img src="${b.src}" width="${safeW}" height="${b.h}" style="display:block; width:${safeW}px; height:${b.h}px; border:0; outline:none; text-decoration:none;" />`; 
+                } else { 
+                    imgTag = `<div style="width:${safeW}px; height:${b.h}px; background:#e0e0e0;"></div>`; 
+                }
+                if (b.href) htmlTable += `<a href="${b.href}" target="_blank" style="text-decoration:none; display:block;">${imgTag}</a>`; else htmlTable += imgTag;
+             } else if (b.type === 'text') {
+                htmlTable += `<div style="${b.css}; box-sizing:border-box; margin:0; display:block;">${b.html}</div>`;
+             } else if (b.type === 'spacer') {
+                htmlTable += `<div style="width:100%; height:${b.h}px; font-size:1px; line-height:1px; background-color:transparent;">&nbsp;</div>`;
+             }
+             
+             htmlTable += `</td></tr></table>`;
+             htmlTable += `</td>`;
+             currentX = startX + safeW;
+          }
         });
-
-        if (currentX < 850) { htmlTable += `<td width="${850 - currentX}" style="font-size:1px; line-height:1px;">&nbsp;</td>`; }
-        htmlTable += `</tr></table></td></tr>`; currentY = row.bottom;
+        
+        // Relleno vacío de la fila para llegar exacto a 850
+        if (currentX < 850) { 
+           let rem = 850 - currentX;
+           htmlTable += `<td width="${rem}" style="width:${rem}px; min-width:${rem}px; font-size:1px; line-height:1px; padding:0; margin:0; mso-line-height-rule:exactly;">&nbsp;</td>`; 
+        }
+        
+        htmlTable += `</tr></table></td></tr>`;
+        currentY = row.bottom;
       });
 
-      htmlTable += `</table>`;
+      htmlTable += `</table></td></tr></table>`;
+      
       const boundary = "----=_NextPart_" + Math.random().toString(16).slice(2);
       
-      let eml = `To: destinatario@ejemplo.com\r\nSubject: ${subjectStr}\r\nX-Unsent: 1\r\nMIME-Version: 1.0\r\nContent-Type: multipart/related; boundary="${boundary}"\r\n\r\n--${boundary}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n<!DOCTYPE html><html><body style="margin:0; padding:20px; background-color:#ffffff;">\r\n${htmlTable}\r\n</body></html>\r\n\r\n`;
+      let eml = `To: destinatario@ejemplo.com\r\nSubject: ${subjectStr}\r\nX-Unsent: 1\r\nMIME-Version: 1.0\r\nContent-Type: multipart/related; boundary="${boundary}"\r\n\r\n--${boundary}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n<!DOCTYPE html><html><body style="margin:0; padding:0; background-color:#ffffff;">\r\n${htmlTable}\r\n</body></html>\r\n\r\n`;
       attachments.forEach(att => { eml += `--${boundary}\r\nContent-Type: ${att.mimeType}\r\nContent-Transfer-Encoding: base64\r\nContent-ID: <${att.cid}>\r\n\r\n${att.base64Data}\r\n\r\n`; });
       eml += `--${boundary}--\r\n`;
       const blob = new Blob([eml], { type: 'message/rfc822' }); const url = URL.createObjectURL(blob);
