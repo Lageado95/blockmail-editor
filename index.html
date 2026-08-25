@@ -16,7 +16,6 @@
     
     h2 { font-size: 16px; margin-top: 0; margin-bottom: 15px; color: #ccc; }
     
-    /* MEJORAS EN BOTONES PARA ICONOS PERSONALIZADOS */
     .tool-btn { background-color: #333; color: #fff; border: 1px solid #555; padding: 10px 12px; margin-bottom: 10px; border-radius: 6px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: flex-start; transition: background 0.2s; }
     .tool-btn:hover { background-color: #444; }
     .btn-icon { width: 18px; height: 18px; margin-right: 10px; object-fit: contain; }
@@ -42,7 +41,8 @@
     .swatch { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 1px solid #666; transition: transform 0.1s; }
     .swatch:hover { transform: scale(1.15); border-color: #fff; }
 
-    .block { position: absolute; background-color: #fff; box-sizing: border-box; min-width: 50px; min-height: 50px; cursor: grab; transition: box-shadow 0.2s, transform 0.2s; }
+    /* CSS AJUSTADO: Bajamos el min-height a 10px para permitir spacers chiquitos */
+    .block { position: absolute; background-color: #fff; box-sizing: border-box; min-width: 20px; min-height: 10px; cursor: grab; transition: box-shadow 0.2s, transform 0.2s; }
     .block.dragging { cursor: grabbing; z-index: 8000 !important; opacity: 0.85; box-shadow: 0 15px 30px rgba(0,0,0,0.4); transform: scale(1.02); }
     .block.selected { border: 1.5px solid #0d99ff; z-index: 50; }
     .block:not(.selected) { border: 1px dashed #ccc; }
@@ -71,10 +71,9 @@
 </head>
 <body>
 
-  <!-- BARRA SUPERIOR CON ICONOS PERSONALIZADOS -->
   <div id="topbar">
     <div style="display:flex; align-items:center; gap: 15px;">
-      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlackMail Editor <span style="font-size:12px; color:#0d99ff; font-weight:normal; margin-left:5px;">v0.2.4</span></span>
+      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlackMail Editor <span style="font-size:12px; color:#0d99ff; font-weight:normal; margin-left:5px;">v0.2.5</span></span>
       <label style="font-size: 13px; color: #0d99ff; font-weight: bold;">Asunto:</label>
       <input type="text" id="email-subject" placeholder="Ej: ¡Llegaron las ofertas!" style="width: 300px; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; outline:none;" onchange="saveState()">
     </div>
@@ -101,7 +100,6 @@
 
     <div id="sidebar">
       <h2>Bloques</h2>
-      <!-- BOTONES DE HERRAMIENTAS CON ICONOS PERSONALIZADOS -->
       <button class="tool-btn" onclick="addBlock('image')"><img src="icon-image.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Agregar Imagen</button>
       <button class="tool-btn" onclick="addBlock('text')"><img src="icon-text.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Agregar Texto</button>
       <button class="tool-btn" onclick="addBlock('gif')"><img src="icon-gif.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Agregar GIF</button>
@@ -172,17 +170,17 @@
               <input type="color" id="inline-color" title="Color Selección" style="width:25%; height:33px; margin-top:0; background:none; border:1px solid #444; border-radius:4px; cursor:pointer;" oninput="inlineFormat('foreColor', this.value)" onchange="inlineFormat('foreColor', this.value); saveState();">
             </div>
             
-            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:15px; background: #111; padding: 8px; border-radius: 4px; border: 1px solid #444;">
-              <div class="swatch" style="background:#000000;" onmousedown="event.preventDefault(); inlineFormat('foreColor', '#000000');" title="Negro"></div>
-              <div class="swatch" style="background:#ffffff;" onmousedown="event.preventDefault(); inlineFormat('foreColor', '#ffffff');" title="Blanco"></div>
-              <div class="swatch" style="background:#808080;" onmousedown="event.preventDefault(); inlineFormat('foreColor', '#808080');" title="Gris"></div>
-              <div class="swatch" style="background:#e74c3c;" onmousedown="event.preventDefault(); inlineFormat('foreColor', '#e74c3c');" title="Rojo"></div>
-              <div class="swatch" style="background:#e67e22;" onmousedown="event.preventDefault(); inlineFormat('foreColor', '#e67e22');" title="Naranja"></div>
-              <div class="swatch" style="background:#f1c40f;" onmousedown="event.preventDefault(); inlineFormat('foreColor', '#f1c40f');" title="Amarillo"></div>
-              <div class="swatch" style="background:#2ecc71;" onmousedown="event.preventDefault(); inlineFormat('foreColor', '#2ecc71');" title="Verde"></div>
-              <div class="swatch" style="background:#3498db;" onmousedown="event.preventDefault(); inlineFormat('foreColor', '#3498db');" title="Azul"></div>
-              <div class="swatch" style="background:#9b59b6;" onmousedown="event.preventDefault(); inlineFormat('foreColor', '#9b59b6');" title="Violeta"></div>
+            <div id="palette-container" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:5px; background: #111; padding: 8px; border-radius: 4px; border: 1px solid #444;"></div>
+            
+            <div id="ase-palettes-container"></div>
+
+            <div style="display:flex; gap: 5px; margin-bottom: 5px;">
+              <input type="color" id="new-color-picker" style="width:28px; height:28px; padding:0; border:none; cursor:pointer; background:transparent;" title="Elegir nuevo color">
+              <button class="tool-btn" style="margin:0; padding:4px 8px; flex:1; justify-content:center;" onclick="addCustomColor()">+ Añadir</button>
+              <button class="tool-btn" style="margin:0; padding:4px 8px; flex:1; justify-content:center; background-color:#175185; border-color:#0b3963;" onclick="document.getElementById('ase-upload').click()">📂 .ase</button>
+              <input type="file" id="ase-upload" accept=".ase" style="display:none;" onchange="loadASEFile(event)">
             </div>
+            <div style="font-size:10px; color:#888; text-align:center; margin-bottom:15px; font-style:italic;">(Clic derecho para eliminar un color)</div>
 
             <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px;">Alineación Párrafo</label>
             <div class="align-group">
@@ -194,7 +192,7 @@
           </div>
         </div>
       </div>
-      <div style="font-size:10px; color:#666; text-align:center; margin-top:15px;">v0.2.4</div>
+      <div style="font-size:10px; color:#666; text-align:center; margin-top:15px;">v0.2.5</div>
     </div>
   </div>
 
@@ -223,6 +221,145 @@
     let selectedBlocks = new Set(); let clipboard = []; const SNAP_DIST = 10; 
     let historyArr = []; let historyIndex = -1; let isRestoring = false;
     let savedRange = null;
+
+    let customPalette = JSON.parse(localStorage.getItem('bmail_palette')) || ['#000000', '#ffffff', '#808080', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6'];
+    let asePalettes = JSON.parse(localStorage.getItem('bmail_ase_palettes')) || [];
+
+    function renderPalette() {
+      const container = document.getElementById('palette-container');
+      container.innerHTML = '';
+      customPalette.forEach((c, index) => {
+        let div = document.createElement('div');
+        div.className = 'swatch'; div.style.backgroundColor = c; div.title = c;
+        div.onmousedown = function(e) {
+          e.preventDefault();
+          if (e.button === 2 || e.which === 3) { 
+            customPalette.splice(index, 1); savePalette(); renderPalette();
+          } else { inlineFormat('foreColor', c); }
+        };
+        div.oncontextmenu = function(e) { e.preventDefault(); };
+        container.appendChild(div);
+      });
+
+      const aseContainer = document.getElementById('ase-palettes-container');
+      aseContainer.innerHTML = '';
+      asePalettes.forEach((pal, pIndex) => {
+        let palDiv = document.createElement('div');
+        palDiv.style.marginBottom = '10px';
+        
+        let titleContainer = document.createElement('div');
+        titleContainer.style.display = 'flex';
+        titleContainer.style.justifyContent = 'space-between';
+        titleContainer.style.alignItems = 'center';
+        titleContainer.style.marginBottom = '5px';
+        
+        let titleText = document.createElement('span');
+        titleText.textContent = '🎨 ' + pal.name;
+        titleText.style.fontSize = '12px';
+        titleText.style.color = '#0d99ff';
+        titleText.style.fontWeight = 'bold';
+        
+        let delBtn = document.createElement('span');
+        delBtn.textContent = '🗑️';
+        delBtn.title = 'Eliminar paleta completa';
+        delBtn.style.cursor = 'pointer';
+        delBtn.style.fontSize = '12px';
+        delBtn.onclick = () => { 
+          if(confirm('¿Eliminar la paleta "' + pal.name + '"?')) {
+            asePalettes.splice(pIndex, 1); savePalette(); renderPalette(); 
+          }
+        };
+        
+        titleContainer.appendChild(titleText);
+        titleContainer.appendChild(delBtn);
+
+        let swatchesDiv = document.createElement('div');
+        swatchesDiv.style.cssText = 'display:flex; gap:6px; flex-wrap:wrap; background: #111; padding: 8px; border-radius: 4px; border: 1px solid #444;';
+        
+        pal.colors.forEach((c, cIndex) => {
+           let div = document.createElement('div');
+           div.className = 'swatch'; div.style.backgroundColor = c; div.title = c;
+           div.onmousedown = function(e) {
+             e.preventDefault();
+             if (e.button === 2 || e.which === 3) { 
+               pal.colors.splice(cIndex, 1);
+               if (pal.colors.length === 0) asePalettes.splice(pIndex, 1);
+               savePalette(); renderPalette();
+             } else { inlineFormat('foreColor', c); }
+           };
+           div.oncontextmenu = function(e) { e.preventDefault(); };
+           swatchesDiv.appendChild(div);
+        });
+        
+        palDiv.appendChild(titleContainer);
+        palDiv.appendChild(swatchesDiv);
+        aseContainer.appendChild(palDiv);
+      });
+    }
+
+    function addCustomColor() {
+      let c = document.getElementById('new-color-picker').value;
+      if (!customPalette.includes(c)) { customPalette.push(c); savePalette(); renderPalette(); }
+    }
+
+    function savePalette() {
+      localStorage.setItem('bmail_palette', JSON.stringify(customPalette));
+      localStorage.setItem('bmail_ase_palettes', JSON.stringify(asePalettes));
+    }
+
+    function loadASEFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const fileName = file.name;
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        let buffer = event.target.result;
+        let data = new DataView(buffer);
+        let offset = 0; let colorsFound = [];
+        try {
+          if (data.getUint32(offset) !== 0x41534546) throw new Error("No es ASEF");
+          offset += 4;
+          let versionMajor = data.getUint16(offset); offset += 2;
+          let versionMinor = data.getUint16(offset); offset += 2;
+          let numBlocks = data.getUint32(offset); offset += 4;
+
+          for (let i = 0; i < numBlocks; i++) {
+            let blockType = data.getUint16(offset); offset += 2;
+            let blockLength = data.getUint32(offset); offset += 4;
+            let blockEnd = offset + blockLength;
+
+            if (blockType === 0x0001) {
+              let nameLen = data.getUint16(offset); offset += 2;
+              offset += nameLen * 2;
+              let model = ""; for(let m=0; m<4; m++) { model += String.fromCharCode(data.getUint8(offset++)); }
+              if (model === "RGB ") {
+                let r = Math.round(data.getFloat32(offset) * 255); offset += 4;
+                let g = Math.round(data.getFloat32(offset) * 255); offset += 4;
+                let b = Math.round(data.getFloat32(offset) * 255); offset += 4;
+                colorsFound.push(rgbToHex(`rgb(${r},${g},${b})`));
+              } else if (model === "CMYK") {
+                let c = data.getFloat32(offset); offset += 4;
+                let m = data.getFloat32(offset); offset += 4;
+                let y = data.getFloat32(offset); offset += 4;
+                let k = data.getFloat32(offset); offset += 4;
+                let r = Math.round(255 * (1 - c) * (1 - k));
+                let g = Math.round(255 * (1 - m) * (1 - k));
+                let b = Math.round(255 * (1 - y) * (1 - k));
+                colorsFound.push(rgbToHex(`rgb(${r},${g},${b})`));
+              }
+            }
+            offset = blockEnd;
+          }
+          if (colorsFound.length > 0) {
+            let uniqueColors = [...new Set(colorsFound)];
+            asePalettes.push({ name: fileName, colors: uniqueColors });
+            savePalette(); renderPalette();
+            alert(`¡Éxito! Se importaron ${uniqueColors.length} colores de la paleta "${fileName}".`);
+          } else { alert("No se encontraron colores RGB o CMYK compatibles."); }
+        } catch(err) { alert("El archivo .ase está dañado o no es válido."); }
+      };
+      reader.readAsArrayBuffer(file); e.target.value = '';
+    }
 
     document.addEventListener('selectionchange', () => {
       const active = document.activeElement;
@@ -273,7 +410,18 @@
       state.forEach(item => { let b = addBlock(item.type, item); if (item.selected) addToSelection(b); });
       updateCanvasHeight(); updatePropertiesUI(); isRestoring = false;
     }
-    window.onload = function() { saveState(); }
+    
+    window.onload = function() { 
+      saveState(); 
+      renderPalette(); 
+    }
+
+    function rgbToHex(rgb) {
+      if (!rgb || rgb.startsWith('#')) return rgb || '#000000';
+      let m = rgb.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
+      if (m) return "#" + ("0" + parseInt(m[1],10).toString(16)).slice(-2) + ("0" + parseInt(m[2],10).toString(16)).slice(-2) + ("0" + parseInt(m[3],10).toString(16)).slice(-2);
+      return '#000000'; 
+    }
 
     function updateCanvasHeight() {
       let maxBottom = 800; document.querySelectorAll('.block').forEach(block => { let bottom = parseInt(block.style.top || 0) + block.offsetHeight; if (bottom > maxBottom) maxBottom = bottom; });
@@ -328,6 +476,7 @@
     function updateSelectedBlock(source) {
       if (selectedBlocks.size !== 1) return; 
       let block = Array.from(selectedBlocks)[0]; 
+      let minH = block.dataset.type === 'spacer' ? 10 : 20;
       
       let oldW = block.offsetWidth; let oldH = block.offsetHeight;
       let oldX = parseInt(block.style.left || 0); let oldY = parseInt(block.style.top || 0);
@@ -335,7 +484,10 @@
       let newW = parseInt(propW.value) || 20; 
       let newX = parseInt(propX.value) || 0; 
       let newY = parseInt(propY.value) || 0;
-      let newH = parseInt(propH.value) || 20;
+      let newH = parseInt(propH.value) || minH;
+
+      if (newW < 20) newW = 20;
+      if (newH < minH) newH = minH;
 
       if (source === 'w') { newX = oldX - (newW - oldW) / 2; propX.value = Math.round(newX); }
       if (source === 'h') { newY = oldY - (newH - oldH) / 2; propY.value = Math.round(newY); }
@@ -405,9 +557,10 @@
           if (pos.includes('n')) { let potentialH = origGroupH - dy; if (potentialH >= 40) { newGroupH = potentialH; newGroupY = minY + dy; } }
           let scaleX = newGroupW / origGroupW; let scaleY = newGroupH / origGroupH;
           groupItems.forEach(item => {
+            let minH = item.block.dataset.type === 'spacer' ? 10 : 20;
             let relX = item.l - minX; let relY = item.t - minY;
             let finalL = Math.round(newGroupX + (relX * scaleX)); let finalT = Math.round(newGroupY + (relY * scaleY));
-            let finalW = Math.max(20, Math.round(item.w * scaleX)); let finalH = Math.max(20, Math.round(item.h * scaleY));
+            let finalW = Math.max(20, Math.round(item.w * scaleX)); let finalH = Math.max(minH, Math.round(item.h * scaleY));
             if (finalL < 0) finalL = 0; if (finalL + finalW > 850) finalW = 850 - finalL;
             item.block.style.left = finalL + 'px'; item.block.style.top = finalT + 'px'; item.block.style.width = finalW + 'px'; item.block.style.height = finalH + 'px';
           });
@@ -448,6 +601,8 @@
 
     function addBlock(type, restoreData = null) {
       const block = document.createElement('div'); block.className = 'block'; block.dataset.type = type; 
+      let minH = type === 'spacer' ? 10 : 20;
+
       if (restoreData) { 
           block.style.left = restoreData.x; block.style.top = restoreData.y; block.style.width = restoreData.w; block.style.height = restoreData.h; 
           if(restoreData.src) block.dataset.src = restoreData.src; 
@@ -463,28 +618,54 @@
         const content = document.createElement('div'); content.className = 'block-content bg-image'; 
         if (restoreData && restoreData.src) {
            content.innerHTML = `<img src="${restoreData.src}" style="width:100%; height:100%; object-fit:cover; pointer-events:none;">`;
-        } else { content.innerHTML = 'Imagen (Clic para adjuntar)'; }
+        } else { 
+           content.innerHTML = '<img src="icon-image.png" style="width:40px; opacity:0.25; filter: invert(1); pointer-events:none; user-select:none;">'; 
+        }
         block.appendChild(content);
       } else if (type === 'text') {
         if (!restoreData) block.style.height = '100px'; 
         const content = document.createElement('div'); content.className = 'block-text';
         if (restoreData) {
-           content.style.cssText = restoreData.css; content.innerHTML = restoreData.html;
+           let restoredHtml = restoreData.html;
+           if (restoredHtml === 'Doble clic acá para editar el texto.') {
+               restoredHtml = '<div style="text-align:center; padding-top:10px;"><img src="icon-text.png" style="width:35px; opacity:0.25; filter: invert(1); pointer-events:none; user-select:none;"></div>';
+           }
+           content.style.cssText = restoreData.css; content.innerHTML = restoredHtml;
         } else { 
-           content.style.fontFamily = 'Arial, sans-serif'; content.style.fontSize = '14px'; content.style.lineHeight = '20px'; content.style.color = '#000000'; content.style.textAlign = 'left'; content.style.fontWeight = 'normal'; content.style.fontStyle = 'normal'; content.innerHTML = 'Doble clic acá para editar el texto.'; 
+           content.style.fontFamily = 'Arial, sans-serif'; content.style.fontSize = '14px'; content.style.lineHeight = '20px'; content.style.color = '#000000'; content.style.textAlign = 'left'; content.style.fontWeight = 'normal'; content.style.fontStyle = 'normal'; 
+           content.innerHTML = '<div style="text-align:center; padding-top:10px;"><img src="icon-text.png" style="width:35px; opacity:0.25; filter: invert(1); pointer-events:none; user-select:none;"></div>'; 
         }
-        block.addEventListener('dblclick', function(e) { if (selectedBlocks.size === 1) { content.contentEditable = true; content.classList.add('editing'); content.focus(); } });
-        content.addEventListener('blur', function() { content.contentEditable = false; content.classList.remove('editing'); saveState(); }); block.appendChild(content);
+        block.addEventListener('dblclick', function(e) { 
+           if (selectedBlocks.size === 1) { 
+               content.contentEditable = true; 
+               content.classList.add('editing'); 
+               if (content.innerHTML.includes('icon-text.png')) content.innerHTML = '';
+               content.focus(); 
+           } 
+        });
+        content.addEventListener('blur', function() { 
+           content.contentEditable = false; 
+           content.classList.remove('editing'); 
+           if (content.innerHTML.trim() === '' || content.innerHTML === '<br>') {
+               content.innerHTML = '<div style="text-align:center; padding-top:10px;"><img src="icon-text.png" style="width:35px; opacity:0.25; filter: invert(1); pointer-events:none; user-select:none;"></div>';
+           }
+           saveState(); 
+        }); 
+        block.appendChild(content);
       } else if (type === 'gif') {
         if (!restoreData) block.style.height = '150px'; 
         const content = document.createElement('div'); content.className = 'block-content bg-gif'; 
         if (restoreData && restoreData.src) {
            content.innerHTML = `<img src="${restoreData.src}" style="width:100%; height:100%; object-fit:cover; pointer-events:none;">`;
-        } else { content.innerHTML = 'GIF (Pegar link)'; }
+        } else { 
+           content.innerHTML = '<img src="icon-gif.png" style="width:40px; opacity:0.25; filter: invert(1); pointer-events:none; user-select:none;">'; 
+        }
         block.appendChild(content);
       } else if (type === 'spacer') {
         if (!restoreData) block.style.height = '30px'; 
-        const content = document.createElement('div'); content.className = 'block-content bg-spacer'; content.innerHTML = '<span style="color:#aaa; font-size:11px;">[Espacio Vacío]</span>'; block.appendChild(content);
+        const content = document.createElement('div'); content.className = 'block-content bg-spacer'; 
+        content.innerHTML = '<img src="icon-spacer.png" style="width:24px; opacity:0.2; filter: invert(1); pointer-events:none; user-select:none;">'; 
+        block.appendChild(content);
       }
 
       const handlePositions = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
@@ -503,7 +684,7 @@
               if (pos.includes('s')) { if (Math.abs((newT + newH) - oT) < SNAP_DIST) newH = oT - newT; else if (Math.abs((newT + newH) - oB) < SNAP_DIST) newH = oB - newT; }
               if (pos.includes('n')) { if (Math.abs(newT - oB) < SNAP_DIST) { newH += (newT - oB); newT = oB; } else if (Math.abs(newT - oT) < SNAP_DIST) { newH += (newT - oT); newT = oT; } }
             });
-            if (newW < 20) { if (pos.includes('w')) newL = startL + startW - 20; newW = 20; } if (newH < 20) { if (pos.includes('n')) newT = startT + startH - 20; newH = 20; }
+            if (newW < 20) { if (pos.includes('w')) newL = startL + startW - 20; newW = 20; } if (newH < minH) { if (pos.includes('n')) newT = startT + startH - minH; newH = minH; }
             if (newL < 0) { newW += newL; newL = 0; } if (newL + newW > 850) newW = 850 - newL; if (newT < 0) { newH += newT; newT = 0; }
             let testRect = { left: newL, top: newT, right: newL + newW, bottom: newT + newH }; let collision = false;
             for (let other of otherBlocks) { let oRect = { left: parseInt(other.style.left || 0), top: parseInt(other.style.top || 0), right: parseInt(other.style.left || 0) + other.offsetWidth, bottom: parseInt(other.style.top || 0) + other.offsetHeight }; if (checkOverlap(testRect, oRect)) { collision = true; break; } }
@@ -585,7 +766,11 @@
       let subjectStr = subjectInput.value.trim(); if (!subjectStr) subjectStr = "Mi Nuevo Newsletter";
       let blocks = Array.from(document.querySelectorAll('.block')).map(b => {
         let tEl = b.querySelector('.block-text');
-        return { type: b.dataset.type, x: parseInt(b.style.left || 0), y: parseInt(b.style.top || 0), w: b.offsetWidth, h: b.offsetHeight, src: b.dataset.src || '', href: b.dataset.href || '', html: tEl ? tEl.innerHTML : '', css: tEl ? tEl.style.cssText : '' };
+        let htmlContent = tEl ? tEl.innerHTML : '';
+        if (htmlContent.includes('icon-text.png') || htmlContent === 'Doble clic acá para editar el texto.') {
+            htmlContent = ''; 
+        }
+        return { type: b.dataset.type, x: parseInt(b.style.left || 0), y: parseInt(b.style.top || 0), w: b.offsetWidth, h: b.offsetHeight, src: b.dataset.src || '', href: b.dataset.href || '', html: htmlContent, css: tEl ? tEl.style.cssText : '' };
       });
       if (blocks.length === 0) { alert("El lienzo está vacío. Agregá algo antes de exportar."); return; }
       blocks.sort((a, b) => a.y - b.y || a.x - b.x);
