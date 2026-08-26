@@ -148,7 +148,7 @@
 
   <div id="topbar">
     <div style="display:flex; align-items:center; gap: 15px;">
-      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlockMail <span style="font-size:12px; color:#0d99ff; font-weight:normal; margin-left:5px;">v0.9.1</span></span>
+      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlockMail <span style="font-size:12px; color:#0d99ff; font-weight:normal; margin-left:5px;">v0.9.5</span></span>
       <label style="font-size: 13px; color: #0d99ff; font-weight: bold;">Asunto:</label>
       <input type="text" id="email-subject" placeholder="Ej: ¡Llegaron las ofertas!" style="width: 250px; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 0px; outline:none;" oninput="markUnsaved()">
     </div>
@@ -157,6 +157,10 @@
         <button class="tool-btn" id="btn-dark" style="margin:0; padding:8px 12px; background:#111;" title="Simular Modo Oscuro" onclick="toggleDarkMode()">🌙</button>
         <button class="tool-btn" id="btn-mobile" style="margin:0; padding:8px 12px; background:#111;" title="Simular Vista Celular" onclick="toggleMobileView()">📱</button>
       </div>
+      
+      <!-- BOTONES AGREGADOS PARA ABRIR Y CREAR NUEVO DESDE EL EDITOR -->
+      <button class="tool-btn top-btn" style="background:#222; color:#ccc;" onclick="newProject()">📄 Nuevo</button>
+      <button class="tool-btn top-btn" style="background:#222; color:#ccc;" onclick="triggerLoadProject()"><img src="icon-open.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Abrir</button>
       
       <button class="tool-btn top-btn" onclick="saveActiveProject()"><img src="icon-save.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Guardar</button>
       <button class="tool-btn top-btn" onclick="exportEML()"><img src="icon-export.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Exportar Mail</button>
@@ -293,7 +297,7 @@
           </div>
         </div>
       </div>
-      <div style="font-size:10px; color:#666; text-align:center; margin-top:15px;">v0.9.1</div>
+      <div style="font-size:10px; color:#666; text-align:center; margin-top:15px;">v0.9.5</div>
     </div>
   </div>
 
@@ -319,13 +323,12 @@
       ipcRenderer.on('update-downloaded', () => {
         document.getElementById('update-spinner').style.display = 'none';
         document.getElementById('update-title').innerText = '¡Actualización lista!';
-        document.getElementById('update-text').innerText = 'La nueva versión ya está preparada.\n¿Querés reiniciar la aplicación ahora para instalarla?';
+        document.getElementById('update-text').innerText = 'La nueva versión ya está preparada y se instalará silenciosamente.';
         document.getElementById('update-btn').style.display = 'flex';
         document.getElementById('update-later-btn').style.display = 'flex';
         document.getElementById('update-later-btn').innerText = 'Más tarde';
       });
 
-      // MANEJO DE ERRORES: Parar el spinner y avisarle al usuario
       ipcRenderer.on('update-error', (event, err) => {
         document.getElementById('update-spinner').style.display = 'none';
         document.getElementById('update-title').innerText = 'Error de conexión';
