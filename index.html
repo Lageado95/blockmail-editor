@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>BlackMail Editor</title>
+  <title>BlockMail Editor</title>
   <style>
     /* BORDES RECTOS Y ESTÉTICA FLAT */
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; background-color: #2b2b2b; color: #fff; overflow: hidden; }
@@ -10,7 +10,6 @@
     #topbar { display: flex; align-items: center; justify-content: space-between; background-color: #1e1e1e; padding: 10px 20px; border-bottom: 1px solid #444; z-index: 10001; }
     #main-area { display: flex; flex: 1; overflow: hidden; }
     
-    /* CORRECCIÓN: El contenedor ahora permite scroll horizontal y no aplasta al lienzo */
     #canvas-container { flex: 1; overflow: auto; padding: 40px; position: relative; transition: background-color 0.3s; }
     #newsletter-canvas { width: 850px; margin: 0 auto; flex-shrink: 0; min-height: 800px; background-color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative; transition: transform 0.3s ease; transform-origin: top center; }
     
@@ -106,12 +105,12 @@
 
   <div id="welcome-screen">
     <div class="ws-sidebar">
-      <h1><span style="background:#0d99ff; color:#fff; padding:4px 8px; font-size:14px; font-weight:bold;">BM</span> BlackMail</h1>
+      <h1><img src="logo.png" style="width: 32px; height: 32px; object-fit: contain;" alt="" onerror="this.style.display='none'"> BlockMail</h1>
       <button class="ws-btn-primary" onclick="newProject()">Archivo nuevo</button>
       <button class="ws-btn-secondary" onclick="triggerLoadProject()">Abrir</button>
     </div>
     <div class="ws-main">
-      <div class="ws-title">Te damos la bienvenida a BlackMail, Tiago</div>
+      <div class="ws-title">Te damos la bienvenida a BlockMail, Tiago</div>
       <div class="ws-recents-title">Recientes (Últimos 10)</div>
       <div class="recent-grid" id="recent-projects-grid">
       </div>
@@ -130,7 +129,7 @@
 
   <div id="topbar">
     <div style="display:flex; align-items:center; gap: 15px;">
-      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlackMail Editor <span style="font-size:12px; color:#0d99ff; font-weight:normal; margin-left:5px;">v0.4.4</span></span>
+      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlockMail Editor <span style="font-size:12px; color:#0d99ff; font-weight:normal; margin-left:5px;">v0.4.5</span></span>
       <label style="font-size: 13px; color: #0d99ff; font-weight: bold;">Asunto:</label>
       <input type="text" id="email-subject" placeholder="Ej: ¡Llegaron las ofertas!" style="width: 250px; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 0px; outline:none;" onchange="saveState()">
     </div>
@@ -273,7 +272,7 @@
           </div>
         </div>
       </div>
-      <div style="font-size:10px; color:#666; text-align:center; margin-top:15px;">v0.4.4</div>
+      <div style="font-size:10px; color:#666; text-align:center; margin-top:15px;">v0.4.5</div>
     </div>
   </div>
 
@@ -321,7 +320,6 @@
       document.getElementById('welcome-screen').style.display = 'none';
     }
 
-    // CORRECCIÓN DE LA CAPTURA: Toma la altura total del lienzo
     function takeScreenshot(callback) {
         const canvasNode = document.getElementById('newsletter-canvas');
         const width = 850;
@@ -377,8 +375,7 @@
          
          let thumbHtml = '<div style="font-size:40px; color:#444;">📄</div>';
          if (r.thumbPath) {
-             // CORRECCIÓN: object-fit contain para ver el newsletter entero
-             thumbHtml = `<img src="file:///${r.thumbPath.replace(/\\/g, '/')}?t=${Date.now()}" style="width:100%; height:100%; object-fit:contain; object-position:center; background:#fff; padding:5px; box-sizing:border-box;">`;
+             thumbHtml = `<img src="file:///${r.thumbPath.replace(/\\/g, '/')}?t=${Date.now()}" style="width:100%; height:100%; object-fit:contain; object-position:center; background:#fff; padding:5px; box-sizing:border-box;" onerror="this.style.display='none'">`;
          }
 
          card.innerHTML = `<div class="recent-thumb">${thumbHtml}</div>
@@ -646,13 +643,6 @@
       saveState(); 
       renderPalette(); 
       renderRecents();
-    }
-
-    function rgbToHex(rgb) {
-      if (!rgb || rgb.startsWith('#')) return rgb || '#000000';
-      let m = rgb.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
-      if (m) return "#" + ("0" + parseInt(m[1],10).toString(16)).slice(-2) + ("0" + parseInt(m[2],10).toString(16)).slice(-2) + ("0" + parseInt(m[3],10).toString(16)).slice(-2);
-      return '#000000'; 
     }
 
     function updateCanvasHeight() {
@@ -1007,9 +997,9 @@
       }
 
       const result = await ipcRenderer.invoke('show-save-dialog', {
-          title: 'Guardar Proyecto BlackMail',
+          title: 'Guardar Proyecto BlockMail',
           defaultPath: defaultName,
-          filters: [{ name: 'Proyecto BlackMail', extensions: ['bmail'] }]
+          filters: [{ name: 'Proyecto BlockMail', extensions: ['bmail'] }]
       });
 
       if (result.canceled || !result.filePath) return;
@@ -1064,8 +1054,8 @@
       }
 
       const result = await ipcRenderer.invoke('show-open-dialog', {
-          title: 'Abrir Proyecto BlackMail',
-          filters: [{ name: 'Proyecto BlackMail', extensions: ['bmail'] }]
+          title: 'Abrir Proyecto BlockMail',
+          filters: [{ name: 'Proyecto BlockMail', extensions: ['bmail'] }]
       });
 
       if (result.canceled || result.filePaths.length === 0) return;

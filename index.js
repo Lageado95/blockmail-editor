@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
+const fs = require('fs');
 
 let mainWindow;
 
@@ -22,7 +23,6 @@ app.whenReady().then(() => {
   autoUpdater.checkForUpdatesAndNotify();
 });
 
-// Permisos para abrir y guardar ventanas nativas de Windows
 ipcMain.handle('show-save-dialog', async (event, options) => {
   return await dialog.showSaveDialog(mainWindow, options);
 });
@@ -31,7 +31,6 @@ ipcMain.handle('show-open-dialog', async (event, options) => {
   return await dialog.showOpenDialog(mainWindow, options);
 });
 
-// Ruta oculta de AppData para guardar los thumbnails sin romper el instalador
 ipcMain.handle('get-user-data-path', () => {
   return app.getPath('userData');
 });

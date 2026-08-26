@@ -1,6 +1,6 @@
 {
   "name": "blockmail-editor",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "Creador visual de Newsletters exportables a EML",
   "main": "index.js",
   "author": "Juan Tiago Márquez",
@@ -10,14 +10,14 @@
     "publish": "electron-builder --win -p always"
   },
   "build": {
-    "appId": "com.juantiagomarquez.blackmail",
-    "productName": "BlackMail Editor",
+    "appId": "com.juantiagomarquez.blockmail",
+    "productName": "BlockMail Editor",
     "icon": "icon.ico",
     "fileAssociations": [
       {
         "ext": "bmail",
-        "name": "Proyecto BlackMail",
-        "description": "Archivo de diseño BlackMail Editor",
+        "name": "Proyecto BlockMail",
+        "description": "Archivo de diseño BlockMail Editor",
         "icon": "icon.ico"
       }
     ],
