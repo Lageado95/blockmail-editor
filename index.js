@@ -9,7 +9,7 @@ function createWindow () {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    icon: path.join(__dirname, 'icon.ico'),
+    icon: path.join(__dirname, 'app-logo.ico'),
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -35,17 +35,23 @@ ipcMain.handle('get-user-data-path', () => {
   return app.getPath('userData');
 });
 
-autoUpdater.on('update-available', () => { if (mainWindow) mainWindow.webContents.send('update-available'); });
-autoUpdater.on('update-downloaded', () => { if (mainWindow) mainWindow.webContents.send('update-downloaded'); });
+// Ahora mandamos toda la información de la actualización (info) al HTML
+autoUpdater.on('update-available', (info) => { 
+  if (mainWindow) mainWindow.webContents.send('update-available', info); 
+});
+
+autoUpdater.on('update-downloaded', (info) => { 
+  if (mainWindow) mainWindow.webContents.send('update-downloaded', info); 
+});
 
 autoUpdater.on('error', (error) => { 
   console.log('Error al actualizar: ', error);
   if (mainWindow) mainWindow.webContents.send('update-error', error == null ? "Error desconocido" : (error.stack || error).toString());
 });
 
-// Forzamos la instalación silenciosa y que se vuelva a abrir la app
+// Comando de reinicio limpio para evitar loops
 ipcMain.on('restart-app', () => { 
-  autoUpdater.quitAndInstall(true, true); 
+  autoUpdater.quitAndInstall(); 
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

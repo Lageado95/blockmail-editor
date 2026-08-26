@@ -1,6 +1,6 @@
 {
   "name": "blockmail-editor",
-  "version": "0.9.5",
+  "version": "1.0.0",
   "description": "Creador visual de Newsletters exportables a EML",
   "main": "index.js",
   "author": "Juan Tiago Márquez",
@@ -12,23 +12,25 @@
   "build": {
     "appId": "com.juantiagomarquez.blockmail",
     "productName": "BlockMail Editor",
-    "icon": "icon.ico",
+    "icon": "app-logo.ico",
     "fileAssociations": [
       {
         "ext": "bmail",
         "name": "Proyecto BlockMail",
         "description": "Archivo de diseño BlockMail Editor",
-        "icon": "file-icon.ico"
+        "icon": "doc-logo.ico"
       }
     ],
     "win": {
       "target": "nsis",
-      "icon": "icon.ico"
+      "icon": "app-logo.ico"
     },
     "nsis": {
       "oneClick": true,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": false
+      "allowToChangeInstallationDirectory": false,
+      "shortcutName": "BlockMail Editor",
+      "uninstallDisplayName": "BlockMail Editor"
     },
     "publish": [
       {
