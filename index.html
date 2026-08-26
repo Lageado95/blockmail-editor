@@ -45,14 +45,8 @@
     .prop-row label { font-size: 12px; color: #aaa; }
     .prop-row input { width: 60px; background: #111; border: 1px solid #444; color: white; padding: 4px; border-radius: 0px; text-align: right; }
     
-    /* FLECHAS DE LOS INPUTS NUMÉRICOS AGRANDADAS */
     input[type=number]::-webkit-inner-spin-button, 
-    input[type=number]::-webkit-outer-spin-button {
-      opacity: 1;
-      width: 18px; 
-      height: 30px; 
-      cursor: ns-resize;
-    }
+    input[type=number]::-webkit-outer-spin-button { opacity: 1; width: 18px; height: 30px; cursor: ns-resize; }
 
     #media-properties, #text-props { margin-top: 15px; border-top: 1px solid #444; padding-top: 15px; display: none; }
     .media-input { width: 100%; box-sizing: border-box; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 0px; margin-top: 5px; }
@@ -122,7 +116,6 @@
 </head>
 <body>
 
-  <!-- MODAL DE CIERRE DE PESTAÑA CON CAMBIOS -->
   <div id="close-tab-modal" class="modal-overlay" style="display: none;">
     <div class="modal-box">
       <div class="modal-title">Cambios sin guardar</div>
@@ -159,9 +152,8 @@
 
   <div id="topbar">
     <div style="display:flex; align-items:center; gap: 15px;">
-      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlockMail <span style="font-size:12px; color:#0d99ff; font-weight:normal; margin-left:5px;">v0.4.6</span></span>
+      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlockMail <span style="font-size:12px; color:#0d99ff; font-weight:normal; margin-left:5px;">v0.4.7</span></span>
       <label style="font-size: 13px; color: #0d99ff; font-weight: bold;">Asunto:</label>
-      <!-- NOTA: El OnChange dispara el asterisco de que no esta guardado -->
       <input type="text" id="email-subject" placeholder="Ej: ¡Llegaron las ofertas!" style="width: 250px; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 0px; outline:none;" oninput="markUnsaved()">
     </div>
     <div style="display:flex; gap:10px; align-items: center;">
@@ -176,7 +168,6 @@
     </div>
   </div>
 
-  <!-- BARRA DE PESTAÑAS (NUEVO) -->
   <div id="tabs-bar"></div>
 
   <div id="main-area">
@@ -306,7 +297,7 @@
           </div>
         </div>
       </div>
-      <div style="font-size:10px; color:#666; text-align:center; margin-top:15px;">v0.4.6</div>
+      <div style="font-size:10px; color:#666; text-align:center; margin-top:15px;">v0.4.7</div>
     </div>
   </div>
 
@@ -339,7 +330,6 @@
 
     function restartApp() { if (ipcRenderer) ipcRenderer.send('restart-app'); }
 
-    // --- NUEVO MOTOR DE PESTAÑAS Y ESTADOS (TABS) ---
     let projects = [];
     let activeProjectIndex = -1;
     let tabToClose = -1;
@@ -347,6 +337,7 @@
     const subjectInput = document.getElementById('email-subject');
     const canvas = document.getElementById('newsletter-canvas');
     let historyArr = []; let historyIndex = -1; let isRestoring = false;
+    let currentProjectId = Date.now().toString();
 
     function renderTabs() {
       const tabsBar = document.getElementById('tabs-bar');
@@ -391,6 +382,7 @@
       
       isRestoring = true;
       subjectInput.value = p.subject;
+      currentProjectId = p.id;
       historyArr = [...p.historyArr];
       historyIndex = p.historyIndex;
       
@@ -440,7 +432,7 @@
       if (save) {
           if (activeProjectIndex !== tabToClose) switchTab(tabToClose);
           let saved = await saveActiveProject();
-          if (!saved) return; // Se canceló la ventana de Windows
+          if (!saved) return; 
       }
       forceCloseTab(tabToClose);
     }
@@ -532,7 +524,6 @@
       });
     }
 
-    // --- FUNCIONES DE GUARDADO ---
     async function saveActiveProject() {
       saveState(); 
       if (activeProjectIndex < 0) return false;
@@ -693,25 +684,16 @@
       const container = document.getElementById('palette-container');
       container.innerHTML = '';
       customPalette.forEach((c, index) => {
-        let div = document.createElement('div');
-        div.className = 'swatch'; div.style.backgroundColor = c; div.title = c;
-        div.onmousedown = function(e) {
-          e.preventDefault();
-          if (e.button === 2 || e.which === 3) { 
-            customPalette.splice(index, 1); savePalette(); renderPalette();
-          } else { inlineFormat('foreColor', c); }
-        };
-        div.oncontextmenu = function(e) { e.preventDefault(); };
-        container.appendChild(div);
+        let div = document.createElement('div'); div.className = 'swatch'; div.style.backgroundColor = c; div.title = c;
+        div.onmousedown = function(e) { e.preventDefault(); if (e.button === 2 || e.which === 3) { customPalette.splice(index, 1); savePalette(); renderPalette(); } else { inlineFormat('foreColor', c); } };
+        div.oncontextmenu = function(e) { e.preventDefault(); }; container.appendChild(div);
       });
 
       const aseContainer = document.getElementById('ase-palettes-container');
       aseContainer.innerHTML = '';
       asePalettes.forEach((pal, pIndex) => {
-        let palDiv = document.createElement('div');
-        palDiv.style.marginBottom = '10px';
-        let titleContainer = document.createElement('div');
-        titleContainer.style.display = 'flex'; titleContainer.style.justifyContent = 'space-between'; titleContainer.style.alignItems = 'center'; titleContainer.style.marginBottom = '5px';
+        let palDiv = document.createElement('div'); palDiv.style.marginBottom = '10px';
+        let titleContainer = document.createElement('div'); titleContainer.style.display = 'flex'; titleContainer.style.justifyContent = 'space-between'; titleContainer.style.alignItems = 'center'; titleContainer.style.marginBottom = '5px';
         let titleText = document.createElement('span'); titleText.textContent = '🎨 ' + pal.name; titleText.style.fontSize = '12px'; titleText.style.color = '#0d99ff'; titleText.style.fontWeight = 'bold';
         let delBtn = document.createElement('span'); delBtn.textContent = '🗑️'; delBtn.title = 'Eliminar paleta completa'; delBtn.style.cursor = 'pointer'; delBtn.style.fontSize = '12px';
         delBtn.onclick = () => { if(confirm('¿Eliminar la paleta "' + pal.name + '"?')) { asePalettes.splice(pIndex, 1); savePalette(); renderPalette(); } };
@@ -719,14 +701,8 @@
         let swatchesDiv = document.createElement('div'); swatchesDiv.style.cssText = 'display:flex; gap:6px; flex-wrap:wrap; background: #111; padding: 8px; border: 1px solid #444;';
         pal.colors.forEach((c, cIndex) => {
            let div = document.createElement('div'); div.className = 'swatch'; div.style.backgroundColor = c; div.title = c;
-           div.onmousedown = function(e) {
-             e.preventDefault();
-             if (e.button === 2 || e.which === 3) { 
-               pal.colors.splice(cIndex, 1); if (pal.colors.length === 0) asePalettes.splice(pIndex, 1); savePalette(); renderPalette();
-             } else { inlineFormat('foreColor', c); }
-           };
-           div.oncontextmenu = function(e) { e.preventDefault(); };
-           swatchesDiv.appendChild(div);
+           div.onmousedown = function(e) { e.preventDefault(); if (e.button === 2 || e.which === 3) { pal.colors.splice(cIndex, 1); if (pal.colors.length === 0) asePalettes.splice(pIndex, 1); savePalette(); renderPalette(); } else { inlineFormat('foreColor', c); } };
+           div.oncontextmenu = function(e) { e.preventDefault(); }; swatchesDiv.appendChild(div);
         });
         palDiv.appendChild(titleContainer); palDiv.appendChild(swatchesDiv); aseContainer.appendChild(palDiv);
       });
@@ -743,10 +719,7 @@
     }
 
     function loadASEFile(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const fileName = file.name;
-      const reader = new FileReader();
+      const file = e.target.files[0]; if (!file) return; const fileName = file.name; const reader = new FileReader();
       reader.onload = function(event) {
         let buffer = event.target.result; let data = new DataView(buffer); let offset = 0; let colorsFound = [];
         try {
@@ -765,23 +738,18 @@
                 let r = Math.round(255 * (1 - c) * (1 - k)); let g = Math.round(255 * (1 - m) * (1 - k)); let b = Math.round(255 * (1 - y) * (1 - k));
                 colorsFound.push(rgbToHex(`rgb(${r},${g},${b})`));
               }
-            }
-            offset = blockEnd;
+            } offset = blockEnd;
           }
           if (colorsFound.length > 0) {
-            let uniqueColors = [...new Set(colorsFound)]; asePalettes.push({ name: fileName, colors: uniqueColors }); savePalette(); renderPalette();
-            alert(`¡Éxito! Se importaron ${uniqueColors.length} colores.`);
+            let uniqueColors = [...new Set(colorsFound)]; asePalettes.push({ name: fileName, colors: uniqueColors }); savePalette(); renderPalette(); alert(`¡Éxito! Se importaron ${uniqueColors.length} colores.`);
           } else { alert("No se encontraron colores RGB o CMYK compatibles."); }
         } catch(err) { alert("El archivo .ase está dañado o no es válido."); }
-      };
-      reader.readAsArrayBuffer(file); e.target.value = '';
+      }; reader.readAsArrayBuffer(file); e.target.value = '';
     }
 
     document.addEventListener('selectionchange', () => {
       const active = document.activeElement;
-      if (active && active.classList.contains('editing')) {
-        const sel = window.getSelection(); if (sel.rangeCount > 0) savedRange = sel.getRangeAt(0);
-      }
+      if (active && active.classList.contains('editing')) { const sel = window.getSelection(); if (sel.rangeCount > 0) savedRange = sel.getRangeAt(0); }
     });
 
     function inlineFormat(command, value = null) {
@@ -789,9 +757,7 @@
       if (!active || !active.classList.contains('editing')) {
          if (savedRange && selectedBlocks.size === 1) {
             let block = Array.from(selectedBlocks)[0]; let textEl = block.querySelector('.block-text');
-            if (textEl && textEl.contains(savedRange.commonAncestorContainer)) {
-               const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(savedRange);
-            }
+            if (textEl && textEl.contains(savedRange.commonAncestorContainer)) { const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(savedRange); }
          }
       }
       document.execCommand(command, false, value);
@@ -816,10 +782,7 @@
     function undo() { if (historyIndex > 0) { historyIndex--; loadState(historyArr[historyIndex]); markUnsaved(); } }
     function redo() { if (historyIndex < historyArr.length - 1) { historyIndex++; loadState(historyArr[historyIndex]); markUnsaved(); } }
 
-    window.onload = function() { 
-      renderPalette(); 
-      renderRecents();
-    }
+    window.onload = function() { renderPalette(); renderRecents(); }
 
     function rgbToHex(rgb) {
       if (!rgb || rgb.startsWith('#')) return rgb || '#000000';
@@ -864,12 +827,10 @@
         const type = block.dataset.type;
         if (type === 'image' || type === 'gif') {
           mediaProperties.style.display = 'block'; textProps.style.display = 'none'; imageProps.style.display = (type === 'image') ? 'block' : 'none'; gifProps.style.display = (type === 'gif') ? 'block' : 'none';
-          if (type === 'gif') gifUrlInput.value = block.dataset.src || '';
-          propHref.value = block.dataset.href || '';
+          if (type === 'gif') gifUrlInput.value = block.dataset.src || ''; propHref.value = block.dataset.href || '';
         } else if (type === 'text') {
           mediaProperties.style.display = 'none'; textProps.style.display = 'block'; let tEl = block.querySelector('.block-text');
-          propFontFamily.value = tEl.style.fontFamily.replace(/"/g, '') || 'Arial, sans-serif';
-          propFontSize.value = parseInt(tEl.style.fontSize) || 14; propLineHeight.value = parseInt(tEl.style.lineHeight) || 20;
+          propFontFamily.value = tEl.style.fontFamily.replace(/"/g, '') || 'Arial, sans-serif'; propFontSize.value = parseInt(tEl.style.fontSize) || 14; propLineHeight.value = parseInt(tEl.style.lineHeight) || 20;
           propPaddingTop.value = parseInt(tEl.style.paddingTop) || 0; propPaddingSides.value = parseInt(tEl.style.paddingLeft) || 0;
         } else if (type === 'spacer') { mediaProperties.style.display = 'none'; textProps.style.display = 'none'; }
       } else { propertiesPanel.style.display = 'block'; multiSelectMsg.style.display = 'block'; singleProperties.style.display = 'none'; document.body.classList.remove('single-selection'); }
