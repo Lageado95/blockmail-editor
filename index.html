@@ -7,7 +7,16 @@
     /* BORDES RECTOS Y ESTÉTICA FLAT */
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; background-color: #2b2b2b; color: #fff; overflow: hidden; }
     
-    #topbar { display: flex; align-items: center; justify-content: space-between; background-color: #1e1e1e; padding: 10px 20px; border-bottom: 1px solid #444; z-index: 10001; }
+    #topbar { display: flex; align-items: center; justify-content: space-between; background-color: #1e1e1e; padding: 10px 20px; z-index: 10001; }
+    
+    /* SISTEMA DE PESTAÑAS (TABS) */
+    #tabs-bar { display: flex; background: #1a1a1a; overflow-x: auto; border-bottom: 1px solid #333; z-index: 10000; }
+    .tab { padding: 8px 15px; border-right: 1px solid #333; border-top: 2px solid transparent; background: #222; color: #888; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; max-width: 250px; user-select: none; }
+    .tab.active { background: #1e1e1e; color: #fff; border-top-color: #0d99ff; }
+    .tab-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+    .tab-close { background: none; border: none; color: #888; font-size: 14px; cursor: pointer; padding: 0 4px; border-radius: 4px; outline: none; }
+    .tab-close:hover { background: #444; color: #fff; }
+
     #main-area { display: flex; flex: 1; overflow: hidden; }
     
     #canvas-container { flex: 1; overflow: auto; padding: 40px; position: relative; transition: background-color 0.3s; }
@@ -35,6 +44,16 @@
     .prop-row { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
     .prop-row label { font-size: 12px; color: #aaa; }
     .prop-row input { width: 60px; background: #111; border: 1px solid #444; color: white; padding: 4px; border-radius: 0px; text-align: right; }
+    
+    /* FLECHAS DE LOS INPUTS NUMÉRICOS AGRANDADAS */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button {
+      opacity: 1;
+      width: 18px; 
+      height: 30px; 
+      cursor: ns-resize;
+    }
+
     #media-properties, #text-props { margin-top: 15px; border-top: 1px solid #444; padding-top: 15px; display: none; }
     .media-input { width: 100%; box-sizing: border-box; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 0px; margin-top: 5px; }
     .text-prop-box { display:flex; align-items:center; background:#111; border:1px solid #444; border-radius:0px; padding:0 5px; height: 32px; }
@@ -79,7 +98,7 @@
     .spinner { width: 40px; height: 40px; border: 4px solid rgba(13, 153, 255, 0.3); border-top: 4px solid #0d99ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px auto; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    /* PANTALLA DE INICIO ESTILO ADOBE */
+    /* PANTALLA DE INICIO */
     #welcome-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a1a1a; display: flex; z-index: 100000; }
     .ws-sidebar { width: 260px; background: #252525; padding: 40px 20px; border-right: 1px solid #333; display: flex; flex-direction: column; gap: 15px; }
     .ws-sidebar h1 { margin: 0 0 30px 0; font-size: 20px; color: #fff; display: flex; align-items: center; gap: 10px; }
@@ -102,6 +121,17 @@
   </style>
 </head>
 <body>
+
+  <!-- MODAL DE CIERRE DE PESTAÑA CON CAMBIOS -->
+  <div id="close-tab-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+      <div class="modal-title">Cambios sin guardar</div>
+      <div class="modal-text">Tenés cambios sin guardar en este proyecto. ¿Qué querés hacer antes de cerrarlo?</div>
+      <button class="tool-btn" style="width: 100%; justify-content: center; background-color: #0d99ff; border-color: #007acc; font-weight: bold; padding: 12px;" onclick="confirmCloseTab(true)">💾 Guardar y Cerrar</button>
+      <button class="tool-btn" style="width: 100%; justify-content: center; background-color: #e74c3c; border-color: #c0392b; font-weight: bold; padding: 12px; margin-top: 5px;" onclick="confirmCloseTab(false)">✖️ Salir sin guardar</button>
+      <button class="tool-btn" style="width: 100%; justify-content: center; background: transparent; padding: 12px; margin-top: 15px;" onclick="document.getElementById('close-tab-modal').style.display='none'">Cancelar</button>
+    </div>
+  </div>
 
   <div id="welcome-screen">
     <div class="ws-sidebar">
@@ -129,21 +159,25 @@
 
   <div id="topbar">
     <div style="display:flex; align-items:center; gap: 15px;">
-      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlockMail Editor <span style="font-size:12px; color:#0d99ff; font-weight:normal; margin-left:5px;">v0.4.5</span></span>
+      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlockMail <span style="font-size:12px; color:#0d99ff; font-weight:normal; margin-left:5px;">v0.4.6</span></span>
       <label style="font-size: 13px; color: #0d99ff; font-weight: bold;">Asunto:</label>
-      <input type="text" id="email-subject" placeholder="Ej: ¡Llegaron las ofertas!" style="width: 250px; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 0px; outline:none;" onchange="saveState()">
+      <!-- NOTA: El OnChange dispara el asterisco de que no esta guardado -->
+      <input type="text" id="email-subject" placeholder="Ej: ¡Llegaron las ofertas!" style="width: 250px; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 0px; outline:none;" oninput="markUnsaved()">
     </div>
     <div style="display:flex; gap:10px; align-items: center;">
       <div style="display:flex; gap:5px; margin-right: 15px; border-right: 1px solid #444; padding-right: 15px;">
         <button class="tool-btn" id="btn-dark" style="margin:0; padding:8px 12px; background:#111;" title="Simular Modo Oscuro" onclick="toggleDarkMode()">🌙</button>
-        <button class="tool-btn" id="btn-mobile" style="margin:0; padding:8px 12px; background:#111;" title="Simular Vista Celular (Escala proporcional)" onclick="toggleMobileView()">📱</button>
+        <button class="tool-btn" id="btn-mobile" style="margin:0; padding:8px 12px; background:#111;" title="Simular Vista Celular" onclick="toggleMobileView()">📱</button>
       </div>
       
-      <button class="tool-btn top-btn" onclick="saveProject()"><img src="icon-save.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Guardar</button>
-      <button class="tool-btn top-btn" onclick="triggerLoadProject()"><img src="icon-open.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Abrir</button>
+      <button class="tool-btn top-btn" onclick="saveActiveProject()"><img src="icon-save.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Guardar</button>
       <button class="tool-btn top-btn" onclick="exportEML()"><img src="icon-export.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Exportar Mail</button>
+      <input type="file" id="project-upload" accept=".bmail" style="display:none;" onchange="handleProjectUpload(event)">
     </div>
   </div>
+
+  <!-- BARRA DE PESTAÑAS (NUEVO) -->
+  <div id="tabs-bar"></div>
 
   <div id="main-area">
     <div id="canvas-container">
@@ -272,16 +306,13 @@
           </div>
         </div>
       </div>
-      <div style="font-size:10px; color:#666; text-align:center; margin-top:15px;">v0.4.5</div>
+      <div style="font-size:10px; color:#666; text-align:center; margin-top:15px;">v0.4.6</div>
     </div>
   </div>
 
   <script>
     let fs, path;
-    try {
-        fs = require('fs');
-        path = require('path');
-    } catch(e) {}
+    try { fs = require('fs'); path = require('path'); } catch(e) {}
 
     let ipcRenderer = null;
     try { ipcRenderer = require('electron').ipcRenderer; } catch (e) { console.log("Modo Web"); }
@@ -308,52 +339,154 @@
 
     function restartApp() { if (ipcRenderer) ipcRenderer.send('restart-app'); }
 
-    let currentProjectId = Date.now().toString();
+    // --- NUEVO MOTOR DE PESTAÑAS Y ESTADOS (TABS) ---
+    let projects = [];
+    let activeProjectIndex = -1;
+    let tabToClose = -1;
 
-    function newProject() {
+    const subjectInput = document.getElementById('email-subject');
+    const canvas = document.getElementById('newsletter-canvas');
+    let historyArr = []; let historyIndex = -1; let isRestoring = false;
+
+    function renderTabs() {
+      const tabsBar = document.getElementById('tabs-bar');
+      tabsBar.innerHTML = '';
+      
+      projects.forEach((proj, index) => {
+         let tab = document.createElement('div');
+         tab.className = 'tab';
+         if (index === activeProjectIndex) tab.classList.add('active');
+         
+         let titleStr = proj.name;
+         if (proj.unsaved) titleStr += ' *';
+         
+         tab.innerHTML = `<span class="tab-title" title="${proj.name}">${titleStr}</span>
+                          <button class="tab-close" onclick="attemptCloseTab(event, ${index})">✖</button>`;
+         
+         tab.onclick = () => { if (index !== activeProjectIndex) switchTab(index); };
+         tabsBar.appendChild(tab);
+      });
+    }
+
+    function markUnsaved() {
+      if (!isRestoring && activeProjectIndex >= 0 && projects[activeProjectIndex]) {
+          projects[activeProjectIndex].unsaved = true;
+          renderTabs();
+      }
+    }
+
+    function syncActiveProject() {
+      if (activeProjectIndex >= 0 && projects[activeProjectIndex]) {
+          projects[activeProjectIndex].subject = subjectInput.value;
+          projects[activeProjectIndex].historyArr = [...historyArr];
+          projects[activeProjectIndex].historyIndex = historyIndex;
+          projects[activeProjectIndex].blocks = historyArr[historyIndex] || [];
+      }
+    }
+
+    function switchTab(index) {
+      syncActiveProject();
+      activeProjectIndex = index;
+      let p = projects[index];
+      
+      isRestoring = true;
+      subjectInput.value = p.subject;
+      historyArr = [...p.historyArr];
+      historyIndex = p.historyIndex;
+      
       document.querySelectorAll('.block').forEach(b => b.remove());
       selectedBlocks.clear();
-      document.getElementById('email-subject').value = '';
-      historyArr = []; historyIndex = -1;
-      currentProjectId = Date.now().toString();
-      saveState();
+      
+      if (p.blocks) {
+          p.blocks.forEach(item => { 
+              let b = addBlock(item.type, item); 
+              if (item.selected) addToSelection(b); 
+          });
+      }
+      
+      updateCanvasHeight(); 
+      updatePropertiesUI();
+      isRestoring = false;
+      renderTabs();
+    }
+
+    function newProject() {
+      let newProj = {
+          id: Date.now().toString(),
+          name: 'Sin Título',
+          subject: '',
+          blocks: [],
+          historyArr: [[]],
+          historyIndex: 0,
+          unsaved: false
+      };
+      projects.push(newProj);
+      switchTab(projects.length - 1);
       document.getElementById('welcome-screen').style.display = 'none';
     }
 
-    function takeScreenshot(callback) {
-        const canvasNode = document.getElementById('newsletter-canvas');
+    function attemptCloseTab(e, index) {
+      e.stopPropagation();
+      if (projects[index].unsaved) {
+          tabToClose = index;
+          document.getElementById('close-tab-modal').style.display = 'flex';
+      } else {
+          forceCloseTab(index);
+      }
+    }
+
+    async function confirmCloseTab(save) {
+      document.getElementById('close-tab-modal').style.display = 'none';
+      if (save) {
+          if (activeProjectIndex !== tabToClose) switchTab(tabToClose);
+          let saved = await saveActiveProject();
+          if (!saved) return; // Se canceló la ventana de Windows
+      }
+      forceCloseTab(tabToClose);
+    }
+
+    function forceCloseTab(index) {
+      projects.splice(index, 1);
+      if (projects.length === 0) {
+          activeProjectIndex = -1;
+          document.getElementById('welcome-screen').style.display = 'flex';
+          document.querySelectorAll('.block').forEach(b => b.remove());
+          subjectInput.value = '';
+          renderTabs();
+      } else {
+          if (activeProjectIndex === index) {
+              switchTab(Math.max(0, index - 1));
+          } else if (activeProjectIndex > index) {
+              activeProjectIndex--;
+              renderTabs();
+          } else {
+              renderTabs();
+          }
+      }
+    }
+
+    function takeScreenshot(projectId, callback) {
         const width = 850;
-        const height = canvasNode.scrollHeight; 
+        const height = canvas.scrollHeight; 
         
         clearSelection();
-        let clone = canvasNode.cloneNode(true);
+        let clone = canvas.cloneNode(true);
         clone.style.transform = 'none';
         clone.querySelectorAll('#selection-box, #multi-selection-box, .resize-handle, .delete-btn').forEach(el => el.remove());
-        
         clone.querySelectorAll('img').forEach(img => {
-            if (img.src.includes('icon-') || (img.src.startsWith('file://') && !img.src.startsWith('data:image'))) {
-                img.remove();
-            }
+            if (img.src.includes('icon-') || (img.src.startsWith('file://') && !img.src.startsWith('data:image'))) img.remove();
         });
 
         const htmlStr = new XMLSerializer().serializeToString(clone);
-        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-            <foreignObject width="100%" height="100%">
-                <div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px; height:${height}px; background:white; margin:0; padding:0;">
-                    ${htmlStr}
-                </div>
-            </foreignObject>
-        </svg>`;
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px; height:${height}px; background:white; margin:0; padding:0;">${htmlStr}</div></foreignObject></svg>`;
         
         const img = new Image();
         img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
         img.onload = () => {
             const cvs = document.createElement('canvas');
-            cvs.width = width / 4;
-            cvs.height = height / 4;
+            cvs.width = width / 4; cvs.height = height / 4;
             const ctx = cvs.getContext('2d');
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, cvs.width, cvs.height);
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cvs.width, cvs.height);
             ctx.drawImage(img, 0, 0, cvs.width, cvs.height);
             callback(cvs.toDataURL('image/png'));
         };
@@ -372,58 +505,136 @@
       recents.forEach(r => {
          let card = document.createElement('div');
          card.className = 'recent-card';
-         
          let thumbHtml = '<div style="font-size:40px; color:#444;">📄</div>';
          if (r.thumbPath) {
              thumbHtml = `<img src="file:///${r.thumbPath.replace(/\\/g, '/')}?t=${Date.now()}" style="width:100%; height:100%; object-fit:contain; object-position:center; background:#fff; padding:5px; box-sizing:border-box;" onerror="this.style.display='none'">`;
          }
-
          card.innerHTML = `<div class="recent-thumb">${thumbHtml}</div>
                            <div class="recent-info" title="${r.name}">
                              <span class="recent-name">${r.name}</span>
                              <span class="recent-date">${r.date}</span>
                            </div>`;
          card.onclick = () => {
-            document.getElementById('email-subject').value = r.data.subject || '';
-            currentProjectId = r.id || Date.now().toString();
-            loadState(r.data.blocks);
-            saveState();
+            let loadedProj = {
+                id: r.id || Date.now().toString(),
+                name: r.name,
+                subject: r.data.subject || '',
+                blocks: r.data.blocks || [],
+                historyArr: [r.data.blocks || []],
+                historyIndex: 0,
+                unsaved: false
+            };
+            projects.push(loadedProj);
+            switchTab(projects.length - 1);
             document.getElementById('welcome-screen').style.display = 'none';
          };
          grid.appendChild(card);
       });
     }
 
-    let isDarkMode = false;
-    function toggleDarkMode() {
-      isDarkMode = !isDarkMode;
-      const c = document.getElementById('newsletter-canvas');
-      const btn = document.getElementById('btn-dark');
-      if (isDarkMode) {
-        c.classList.add('dark-preview-canvas');
-        btn.style.backgroundColor = '#0d99ff'; btn.style.borderColor = '#007acc';
-      } else {
-        c.classList.remove('dark-preview-canvas');
-        btn.style.backgroundColor = '#111'; btn.style.borderColor = '#555';
+    // --- FUNCIONES DE GUARDADO ---
+    async function saveActiveProject() {
+      saveState(); 
+      if (activeProjectIndex < 0) return false;
+      let p = projects[activeProjectIndex];
+      const projectData = { subject: p.subject, blocks: p.blocks };
+      let defaultName = (p.name !== 'Sin Título' ? p.name : (p.subject.trim() || 'Mi_Proyecto')) + '.bmail';
+      
+      if (!ipcRenderer) {
+          const blob = new Blob([JSON.stringify(projectData)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url;
+          a.download = defaultName; a.click(); URL.revokeObjectURL(url);
+          p.unsaved = false; p.name = defaultName.replace('.bmail', ''); renderTabs();
+          return true;
       }
+
+      const result = await ipcRenderer.invoke('show-save-dialog', {
+          title: 'Guardar Proyecto BlockMail',
+          defaultPath: defaultName,
+          filters: [{ name: 'Proyecto BlockMail', extensions: ['bmail'] }]
+      });
+
+      if (result.canceled || !result.filePath) return false;
+      
+      const filePath = result.filePath;
+      const fileName = path.basename(filePath, '.bmail'); 
+      fs.writeFileSync(filePath, JSON.stringify(projectData), 'utf-8');
+
+      p.name = fileName;
+      p.unsaved = false;
+      renderTabs();
+
+      takeScreenshot(p.id, (base64Img) => {
+          let recents = JSON.parse(localStorage.getItem('bmail_recents')) || [];
+          recents = recents.filter(r => r.id !== p.id);
+          let thumbPath = '';
+          if (base64Img && userDataPath) {
+              thumbPath = path.join(userDataPath, 'thumbnails', p.id + '.png');
+              const base64Data = base64Img.replace(/^data:image\/png;base64,/, "");
+              fs.writeFileSync(thumbPath, base64Data, 'base64');
+          }
+          recents.unshift({ id: p.id, name: fileName, data: projectData, date: new Date().toLocaleDateString(), thumbPath: thumbPath });
+          if(recents.length > 10) recents = recents.slice(0, 10);
+          localStorage.setItem('bmail_recents', JSON.stringify(recents));
+          
+          if (userDataPath) {
+              const thumbsDir = path.join(userDataPath, 'thumbnails');
+              if (fs.existsSync(thumbsDir)) {
+                  const validIds = recents.map(r => r.id + '.png');
+                  const files = fs.readdirSync(thumbsDir);
+                  files.forEach(f => {
+                      if (f.endsWith('.png') && !validIds.includes(f)) { try { fs.unlinkSync(path.join(thumbsDir, f)); } catch(e){} }
+                  });
+              }
+          }
+          renderRecents();
+      });
+      return true;
     }
 
-    let isMobileView = false;
-    function toggleMobileView() {
-      isMobileView = !isMobileView;
-      const c = document.getElementById('newsletter-canvas');
-      const btn = document.getElementById('btn-mobile');
-      if (isMobileView) {
-        c.classList.add('mobile-view');
-        btn.style.backgroundColor = '#0d99ff'; btn.style.borderColor = '#007acc';
-      } else {
-        c.classList.remove('mobile-view');
-        btn.style.backgroundColor = '#111'; btn.style.borderColor = '#555';
-      }
-      updateMultiSelectionBoundingBox();
+    async function triggerLoadProject() { 
+      if (!ipcRenderer) { document.getElementById('project-upload').click(); return; }
+      const result = await ipcRenderer.invoke('show-open-dialog', { title: 'Abrir Proyecto BlockMail', filters: [{ name: 'Proyecto BlockMail', extensions: ['bmail'] }] });
+      if (result.canceled || result.filePaths.length === 0) return;
+      try {
+          const fileContent = fs.readFileSync(result.filePaths[0], 'utf-8');
+          const projectData = JSON.parse(fileContent);
+          let loadedProj = {
+                id: Date.now().toString(),
+                name: path.basename(result.filePaths[0], '.bmail'),
+                subject: projectData.subject || '',
+                blocks: projectData.blocks || [],
+                historyArr: [projectData.blocks || []],
+                historyIndex: 0,
+                unsaved: false
+          };
+          projects.push(loadedProj);
+          switchTab(projects.length - 1);
+          document.getElementById('welcome-screen').style.display = 'none'; 
+      } catch (err) { alert("El archivo no es válido."); }
     }
 
-    const canvas = document.getElementById('newsletter-canvas');
+    function handleProjectUpload(e) {
+      const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          const projectData = JSON.parse(event.target.result);
+          let loadedProj = {
+                id: Date.now().toString(),
+                name: file.name.replace('.bmail', ''),
+                subject: projectData.subject || '',
+                blocks: projectData.blocks || [],
+                historyArr: [projectData.blocks || []],
+                historyIndex: 0,
+                unsaved: false
+          };
+          projects.push(loadedProj);
+          switchTab(projects.length - 1);
+          document.getElementById('welcome-screen').style.display = 'none'; 
+        } catch (err) { alert("El archivo no es válido."); }
+      }; reader.readAsText(file); e.target.value = ""; 
+    }
+
     const selectionBox = document.getElementById('selection-box');
     const multiSelectionBox = document.getElementById('multi-selection-box');
     const propertiesPanel = document.getElementById('properties-panel');
@@ -437,7 +648,6 @@
     const imageProps = document.getElementById('image-props'), gifProps = document.getElementById('gif-props');
     const gifUrlInput = document.getElementById('gif-url');
     const propHref = document.getElementById('prop-href');
-    const subjectInput = document.getElementById('email-subject');
     
     const textProps = document.getElementById('text-props');
     const propFontFamily = document.getElementById('prop-font-family');
@@ -447,8 +657,34 @@
     const propPaddingSides = document.getElementById('prop-padding-sides');
     
     let selectedBlocks = new Set(); let clipboard = []; const SNAP_DIST = 10; 
-    let historyArr = []; let historyIndex = -1; let isRestoring = false;
     let savedRange = null;
+
+    let isDarkMode = false;
+    function toggleDarkMode() {
+      isDarkMode = !isDarkMode;
+      const btn = document.getElementById('btn-dark');
+      if (isDarkMode) {
+        canvas.classList.add('dark-preview-canvas');
+        btn.style.backgroundColor = '#0d99ff'; btn.style.borderColor = '#007acc';
+      } else {
+        canvas.classList.remove('dark-preview-canvas');
+        btn.style.backgroundColor = '#111'; btn.style.borderColor = '#555';
+      }
+    }
+
+    let isMobileView = false;
+    function toggleMobileView() {
+      isMobileView = !isMobileView;
+      const btn = document.getElementById('btn-mobile');
+      if (isMobileView) {
+        canvas.classList.add('mobile-view');
+        btn.style.backgroundColor = '#0d99ff'; btn.style.borderColor = '#007acc';
+      } else {
+        canvas.classList.remove('mobile-view');
+        btn.style.backgroundColor = '#111'; btn.style.borderColor = '#555';
+      }
+      updateMultiSelectionBoundingBox();
+    }
 
     let customPalette = JSON.parse(localStorage.getItem('bmail_palette')) || ['#000000', '#ffffff', '#808080', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6'];
     let asePalettes = JSON.parse(localStorage.getItem('bmail_ase_palettes')) || [];
@@ -474,54 +710,25 @@
       asePalettes.forEach((pal, pIndex) => {
         let palDiv = document.createElement('div');
         palDiv.style.marginBottom = '10px';
-        
         let titleContainer = document.createElement('div');
-        titleContainer.style.display = 'flex';
-        titleContainer.style.justifyContent = 'space-between';
-        titleContainer.style.alignItems = 'center';
-        titleContainer.style.marginBottom = '5px';
-        
-        let titleText = document.createElement('span');
-        titleText.textContent = '🎨 ' + pal.name;
-        titleText.style.fontSize = '12px';
-        titleText.style.color = '#0d99ff';
-        titleText.style.fontWeight = 'bold';
-        
-        let delBtn = document.createElement('span');
-        delBtn.textContent = '🗑️';
-        delBtn.title = 'Eliminar paleta completa';
-        delBtn.style.cursor = 'pointer';
-        delBtn.style.fontSize = '12px';
-        delBtn.onclick = () => { 
-          if(confirm('¿Eliminar la paleta "' + pal.name + '"?')) {
-            asePalettes.splice(pIndex, 1); savePalette(); renderPalette(); 
-          }
-        };
-        
-        titleContainer.appendChild(titleText);
-        titleContainer.appendChild(delBtn);
-
-        let swatchesDiv = document.createElement('div');
-        swatchesDiv.style.cssText = 'display:flex; gap:6px; flex-wrap:wrap; background: #111; padding: 8px; border: 1px solid #444;';
-        
+        titleContainer.style.display = 'flex'; titleContainer.style.justifyContent = 'space-between'; titleContainer.style.alignItems = 'center'; titleContainer.style.marginBottom = '5px';
+        let titleText = document.createElement('span'); titleText.textContent = '🎨 ' + pal.name; titleText.style.fontSize = '12px'; titleText.style.color = '#0d99ff'; titleText.style.fontWeight = 'bold';
+        let delBtn = document.createElement('span'); delBtn.textContent = '🗑️'; delBtn.title = 'Eliminar paleta completa'; delBtn.style.cursor = 'pointer'; delBtn.style.fontSize = '12px';
+        delBtn.onclick = () => { if(confirm('¿Eliminar la paleta "' + pal.name + '"?')) { asePalettes.splice(pIndex, 1); savePalette(); renderPalette(); } };
+        titleContainer.appendChild(titleText); titleContainer.appendChild(delBtn);
+        let swatchesDiv = document.createElement('div'); swatchesDiv.style.cssText = 'display:flex; gap:6px; flex-wrap:wrap; background: #111; padding: 8px; border: 1px solid #444;';
         pal.colors.forEach((c, cIndex) => {
-           let div = document.createElement('div');
-           div.className = 'swatch'; div.style.backgroundColor = c; div.title = c;
+           let div = document.createElement('div'); div.className = 'swatch'; div.style.backgroundColor = c; div.title = c;
            div.onmousedown = function(e) {
              e.preventDefault();
              if (e.button === 2 || e.which === 3) { 
-               pal.colors.splice(cIndex, 1);
-               if (pal.colors.length === 0) asePalettes.splice(pIndex, 1);
-               savePalette(); renderPalette();
+               pal.colors.splice(cIndex, 1); if (pal.colors.length === 0) asePalettes.splice(pIndex, 1); savePalette(); renderPalette();
              } else { inlineFormat('foreColor', c); }
            };
            div.oncontextmenu = function(e) { e.preventDefault(); };
            swatchesDiv.appendChild(div);
         });
-        
-        palDiv.appendChild(titleContainer);
-        palDiv.appendChild(swatchesDiv);
-        aseContainer.appendChild(palDiv);
+        palDiv.appendChild(titleContainer); palDiv.appendChild(swatchesDiv); aseContainer.appendChild(palDiv);
       });
     }
 
@@ -541,48 +748,29 @@
       const fileName = file.name;
       const reader = new FileReader();
       reader.onload = function(event) {
-        let buffer = event.target.result;
-        let data = new DataView(buffer);
-        let offset = 0; let colorsFound = [];
+        let buffer = event.target.result; let data = new DataView(buffer); let offset = 0; let colorsFound = [];
         try {
           if (data.getUint32(offset) !== 0x41534546) throw new Error("No es ASEF");
-          offset += 4;
-          let versionMajor = data.getUint16(offset); offset += 2;
-          let versionMinor = data.getUint16(offset); offset += 2;
-          let numBlocks = data.getUint32(offset); offset += 4;
-
+          offset += 4; let versionMajor = data.getUint16(offset); offset += 2; let versionMinor = data.getUint16(offset); offset += 2; let numBlocks = data.getUint32(offset); offset += 4;
           for (let i = 0; i < numBlocks; i++) {
-            let blockType = data.getUint16(offset); offset += 2;
-            let blockLength = data.getUint32(offset); offset += 4;
-            let blockEnd = offset + blockLength;
-
+            let blockType = data.getUint16(offset); offset += 2; let blockLength = data.getUint32(offset); offset += 4; let blockEnd = offset + blockLength;
             if (blockType === 0x0001) {
-              let nameLen = data.getUint16(offset); offset += 2;
-              offset += nameLen * 2;
+              let nameLen = data.getUint16(offset); offset += 2; offset += nameLen * 2;
               let model = ""; for(let m=0; m<4; m++) { model += String.fromCharCode(data.getUint8(offset++)); }
               if (model === "RGB ") {
-                let r = Math.round(data.getFloat32(offset) * 255); offset += 4;
-                let g = Math.round(data.getFloat32(offset) * 255); offset += 4;
-                let b = Math.round(data.getFloat32(offset) * 255); offset += 4;
+                let r = Math.round(data.getFloat32(offset) * 255); offset += 4; let g = Math.round(data.getFloat32(offset) * 255); offset += 4; let b = Math.round(data.getFloat32(offset) * 255); offset += 4;
                 colorsFound.push(rgbToHex(`rgb(${r},${g},${b})`));
               } else if (model === "CMYK") {
-                let c = data.getFloat32(offset); offset += 4;
-                let m = data.getFloat32(offset); offset += 4;
-                let y = data.getFloat32(offset); offset += 4;
-                let k = data.getFloat32(offset); offset += 4;
-                let r = Math.round(255 * (1 - c) * (1 - k));
-                let g = Math.round(255 * (1 - m) * (1 - k));
-                let b = Math.round(255 * (1 - y) * (1 - k));
+                let c = data.getFloat32(offset); offset += 4; let m = data.getFloat32(offset); offset += 4; let y = data.getFloat32(offset); offset += 4; let k = data.getFloat32(offset); offset += 4;
+                let r = Math.round(255 * (1 - c) * (1 - k)); let g = Math.round(255 * (1 - m) * (1 - k)); let b = Math.round(255 * (1 - y) * (1 - k));
                 colorsFound.push(rgbToHex(`rgb(${r},${g},${b})`));
               }
             }
             offset = blockEnd;
           }
           if (colorsFound.length > 0) {
-            let uniqueColors = [...new Set(colorsFound)];
-            asePalettes.push({ name: fileName, colors: uniqueColors });
-            savePalette(); renderPalette();
-            alert(`¡Éxito! Se importaron ${uniqueColors.length} colores de la paleta "${fileName}".`);
+            let uniqueColors = [...new Set(colorsFound)]; asePalettes.push({ name: fileName, colors: uniqueColors }); savePalette(); renderPalette();
+            alert(`¡Éxito! Se importaron ${uniqueColors.length} colores.`);
           } else { alert("No se encontraron colores RGB o CMYK compatibles."); }
         } catch(err) { alert("El archivo .ase está dañado o no es válido."); }
       };
@@ -592,8 +780,7 @@
     document.addEventListener('selectionchange', () => {
       const active = document.activeElement;
       if (active && active.classList.contains('editing')) {
-        const sel = window.getSelection();
-        if (sel.rangeCount > 0) savedRange = sel.getRangeAt(0);
+        const sel = window.getSelection(); if (sel.rangeCount > 0) savedRange = sel.getRangeAt(0);
       }
     });
 
@@ -601,19 +788,14 @@
       const active = document.activeElement;
       if (!active || !active.classList.contains('editing')) {
          if (savedRange && selectedBlocks.size === 1) {
-            let block = Array.from(selectedBlocks)[0];
-            let textEl = block.querySelector('.block-text');
+            let block = Array.from(selectedBlocks)[0]; let textEl = block.querySelector('.block-text');
             if (textEl && textEl.contains(savedRange.commonAncestorContainer)) {
-               const sel = window.getSelection();
-               sel.removeAllRanges();
-               sel.addRange(savedRange);
+               const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(savedRange);
             }
          }
       }
       document.execCommand(command, false, value);
-      if (value !== null && document.getElementById('inline-color')) {
-        document.getElementById('inline-color').value = value;
-      }
+      if (value !== null && document.getElementById('inline-color')) document.getElementById('inline-color').value = value;
     }
 
     function saveState() {
@@ -628,21 +810,22 @@
       }));
       historyArr.push(currentState);
       if (historyArr.length > 20) { historyArr.shift(); } else { historyIndex++; }
+      markUnsaved();
     }
 
-    function undo() { if (historyIndex > 0) { historyIndex--; loadState(historyArr[historyIndex]); } }
-    function redo() { if (historyIndex < historyArr.length - 1) { historyIndex++; loadState(historyArr[historyIndex]); } }
+    function undo() { if (historyIndex > 0) { historyIndex--; loadState(historyArr[historyIndex]); markUnsaved(); } }
+    function redo() { if (historyIndex < historyArr.length - 1) { historyIndex++; loadState(historyArr[historyIndex]); markUnsaved(); } }
 
-    function loadState(state) {
-      isRestoring = true; document.querySelectorAll('.block').forEach(b => b.remove()); selectedBlocks.clear();
-      state.forEach(item => { let b = addBlock(item.type, item); if (item.selected) addToSelection(b); });
-      updateCanvasHeight(); updatePropertiesUI(); isRestoring = false;
-    }
-    
     window.onload = function() { 
-      saveState(); 
       renderPalette(); 
       renderRecents();
+    }
+
+    function rgbToHex(rgb) {
+      if (!rgb || rgb.startsWith('#')) return rgb || '#000000';
+      let m = rgb.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
+      if (m) return "#" + ("0" + parseInt(m[1],10).toString(16)).slice(-2) + ("0" + parseInt(m[2],10).toString(16)).slice(-2) + ("0" + parseInt(m[3],10).toString(16)).slice(-2);
+      return '#000000'; 
     }
 
     function updateCanvasHeight() {
@@ -652,9 +835,7 @@
     const canvasObserver = new MutationObserver(updateCanvasHeight); canvasObserver.observe(canvas, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
 
     function updateMultiSelectionBoundingBox() {
-      if (selectedBlocks.size <= 1) {
-        multiSelectionBox.style.display = 'none'; document.body.classList.remove('multi-selection-active'); return;
-      }
+      if (selectedBlocks.size <= 1) { multiSelectionBox.style.display = 'none'; document.body.classList.remove('multi-selection-active'); return; }
       let minX = Infinity, minY = Infinity, maxX = 0, maxY = 0;
       selectedBlocks.forEach(b => {
         let l = parseInt(b.style.left || 0), t = parseInt(b.style.top || 0); let r = l + b.offsetWidth, bot = t + b.offsetHeight;
@@ -689,71 +870,40 @@
           mediaProperties.style.display = 'none'; textProps.style.display = 'block'; let tEl = block.querySelector('.block-text');
           propFontFamily.value = tEl.style.fontFamily.replace(/"/g, '') || 'Arial, sans-serif';
           propFontSize.value = parseInt(tEl.style.fontSize) || 14; propLineHeight.value = parseInt(tEl.style.lineHeight) || 20;
-          propPaddingTop.value = parseInt(tEl.style.paddingTop) || 0;
-          propPaddingSides.value = parseInt(tEl.style.paddingLeft) || 0;
-        } else if (type === 'spacer') {
-          mediaProperties.style.display = 'none'; textProps.style.display = 'none';
-        }
+          propPaddingTop.value = parseInt(tEl.style.paddingTop) || 0; propPaddingSides.value = parseInt(tEl.style.paddingLeft) || 0;
+        } else if (type === 'spacer') { mediaProperties.style.display = 'none'; textProps.style.display = 'none'; }
       } else { propertiesPanel.style.display = 'block'; multiSelectMsg.style.display = 'block'; singleProperties.style.display = 'none'; document.body.classList.remove('single-selection'); }
     }
 
     function updateSelectedBlock(source) {
       if (selectedBlocks.size !== 1) return; 
-      let block = Array.from(selectedBlocks)[0]; 
-      let minH = block.dataset.type === 'spacer' ? 10 : 20;
-      
-      let oldW = block.offsetWidth; let oldH = block.offsetHeight;
-      let oldX = parseInt(block.style.left || 0); let oldY = parseInt(block.style.top || 0);
+      let block = Array.from(selectedBlocks)[0]; let minH = block.dataset.type === 'spacer' ? 10 : 20;
+      let oldW = block.offsetWidth; let oldH = block.offsetHeight; let oldX = parseInt(block.style.left || 0); let oldY = parseInt(block.style.top || 0);
+      let newW = parseInt(propW.value) || 20; let newX = parseInt(propX.value) || 0; let newY = parseInt(propY.value) || 0; let newH = parseInt(propH.value) || minH;
 
-      let newW = parseInt(propW.value) || 20; 
-      let newX = parseInt(propX.value) || 0; 
-      let newY = parseInt(propY.value) || 0;
-      let newH = parseInt(propH.value) || minH;
-
-      if (newW < 20) newW = 20;
-      if (newH < minH) newH = minH;
-
+      if (newW < 20) newW = 20; if (newH < minH) newH = minH;
       if (source === 'w') { newX = oldX - (newW - oldW) / 2; propX.value = Math.round(newX); }
       if (source === 'h') { newY = oldY - (newH - oldH) / 2; propY.value = Math.round(newY); }
-
-      if (newW > 850) newW = 850; 
-      if (newX + newW > 850) newX = 850 - newW; 
-      if (newX < 0) newX = 0; if (newY < 0) newY = 0;
+      if (newW > 850) newW = 850; if (newX + newW > 850) newX = 850 - newW; if (newX < 0) newX = 0; if (newY < 0) newY = 0;
       
       block.style.width = newW + 'px'; block.style.height = newH + 'px'; block.style.left = newX + 'px'; block.style.top = newY + 'px'; 
       updateCanvasHeight(); 
     }
 
-    function updateMediaLink() {
-      if (selectedBlocks.size !== 1) return; let block = Array.from(selectedBlocks)[0];
-      block.dataset.href = propHref.value.trim();
-    }
-
+    function updateMediaLink() { if (selectedBlocks.size !== 1) return; Array.from(selectedBlocks)[0].dataset.href = propHref.value.trim(); }
     function alignBlock(alignment) {
       if (selectedBlocks.size === 0) return;
       selectedBlocks.forEach(block => { let w = block.offsetWidth; if (alignment === 'left') block.style.left = '0px'; else if (alignment === 'center') block.style.left = Math.round((850 - w) / 2) + 'px'; else if (alignment === 'right') block.style.left = (850 - w) + 'px'; });
       updatePropertiesUI(); saveState();
     }
-
     function updateTextProperties() {
       if (selectedBlocks.size !== 1) return; let block = Array.from(selectedBlocks)[0]; if (block.dataset.type !== 'text') return; let tEl = block.querySelector('.block-text');
       tEl.style.fontFamily = propFontFamily.value; tEl.style.fontSize = propFontSize.value + 'px'; tEl.style.lineHeight = propLineHeight.value + 'px';
       tEl.style.paddingTop = propPaddingTop.value + 'px'; tEl.style.paddingLeft = propPaddingSides.value + 'px'; tEl.style.paddingRight = propPaddingSides.value + 'px';
     }
-
     function updateTextAlign(align) { if (selectedBlocks.size === 0) return; selectedBlocks.forEach(block => { if (block.dataset.type === 'text') { block.querySelector('.block-text').style.textAlign = align; } }); saveState(); }
-
     function updateTextVAlign(align) { 
-      if (selectedBlocks.size === 0) return; 
-      selectedBlocks.forEach(block => { 
-        if (block.dataset.type === 'text') { 
-          let tEl = block.querySelector('.block-text'); 
-          tEl.style.display = 'flex'; 
-          tEl.style.flexDirection = 'column'; 
-          tEl.style.justifyContent = align; 
-        } 
-      }); 
-      saveState(); 
+      if (selectedBlocks.size === 0) return; selectedBlocks.forEach(block => { if (block.dataset.type === 'text') { let tEl = block.querySelector('.block-text'); tEl.style.display = 'flex'; tEl.style.flexDirection = 'column'; tEl.style.justifyContent = align; } }); saveState(); 
     }
 
     document.addEventListener('keydown', function(e) {
@@ -980,107 +1130,6 @@
       canvas.appendChild(block); 
       if(!restoreData) { clearSelection(); addToSelection(block); updateCanvasHeight(); updateMultiSelectionBoundingBox(); saveState(); }
       return block; 
-    }
-
-    async function saveProject() {
-      saveState(); 
-      const currentState = historyArr[historyIndex];
-      const projectData = { subject: subjectInput.value, blocks: currentState };
-      
-      let defaultName = (subjectInput.value.trim() || 'Mi_Proyecto') + '.bmail';
-      
-      if (!ipcRenderer) {
-          const blob = new Blob([JSON.stringify(projectData)], { type: 'application/json' });
-          const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url;
-          a.download = defaultName; a.click(); URL.revokeObjectURL(url);
-          return;
-      }
-
-      const result = await ipcRenderer.invoke('show-save-dialog', {
-          title: 'Guardar Proyecto BlockMail',
-          defaultPath: defaultName,
-          filters: [{ name: 'Proyecto BlockMail', extensions: ['bmail'] }]
-      });
-
-      if (result.canceled || !result.filePath) return;
-      
-      const filePath = result.filePath;
-      const fileName = path.basename(filePath, '.bmail'); 
-
-      fs.writeFileSync(filePath, JSON.stringify(projectData), 'utf-8');
-
-      takeScreenshot((base64Img) => {
-          let recents = JSON.parse(localStorage.getItem('bmail_recents')) || [];
-          recents = recents.filter(r => r.id !== currentProjectId);
-          
-          let thumbPath = '';
-          if (base64Img && userDataPath) {
-              thumbPath = path.join(userDataPath, 'thumbnails', currentProjectId + '.png');
-              const base64Data = base64Img.replace(/^data:image\/png;base64,/, "");
-              fs.writeFileSync(thumbPath, base64Data, 'base64');
-          }
-
-          recents.unshift({ 
-              id: currentProjectId, 
-              name: fileName, 
-              data: projectData, 
-              date: new Date().toLocaleDateString(),
-              thumbPath: thumbPath 
-          });
-          
-          if(recents.length > 10) recents = recents.slice(0, 10);
-          localStorage.setItem('bmail_recents', JSON.stringify(recents));
-          
-          if (userDataPath) {
-              const thumbsDir = path.join(userDataPath, 'thumbnails');
-              if (fs.existsSync(thumbsDir)) {
-                  const validIds = recents.map(r => r.id + '.png');
-                  const files = fs.readdirSync(thumbsDir);
-                  files.forEach(f => {
-                      if (f.endsWith('.png') && !validIds.includes(f)) {
-                          try { fs.unlinkSync(path.join(thumbsDir, f)); } catch(e){}
-                      }
-                  });
-              }
-          }
-          renderRecents();
-      });
-    }
-
-    async function triggerLoadProject() { 
-      if (!ipcRenderer) {
-          document.getElementById('project-upload').click(); 
-          return;
-      }
-
-      const result = await ipcRenderer.invoke('show-open-dialog', {
-          title: 'Abrir Proyecto BlockMail',
-          filters: [{ name: 'Proyecto BlockMail', extensions: ['bmail'] }]
-      });
-
-      if (result.canceled || result.filePaths.length === 0) return;
-      
-      try {
-          const fileContent = fs.readFileSync(result.filePaths[0], 'utf-8');
-          const projectData = JSON.parse(fileContent);
-          if (projectData.subject) subjectInput.value = projectData.subject;
-          currentProjectId = Date.now().toString(); 
-          if (projectData.blocks) { loadState(projectData.blocks); saveState(); }
-          document.getElementById('welcome-screen').style.display = 'none'; 
-      } catch (err) { alert("El archivo .bmail no es válido o está dañado."); }
-    }
-
-    function handleProjectUpload(e) {
-      const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
-      reader.onload = function(event) {
-        try {
-          const projectData = JSON.parse(event.target.result);
-          if (projectData.subject) subjectInput.value = projectData.subject;
-          currentProjectId = Date.now().toString(); 
-          if (projectData.blocks) { loadState(projectData.blocks); saveState(); }
-          document.getElementById('welcome-screen').style.display = 'none'; 
-        } catch (err) { alert("El archivo .bmail no es válido o está dañado."); }
-      }; reader.readAsText(file); e.target.value = ""; 
     }
 
     function exportEML() {
