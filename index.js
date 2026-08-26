@@ -10,7 +10,7 @@ function createWindow () {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    icon: path.join(__dirname, 'icon.ico'),
+    icon: path.join(__dirname, 'app-logo.ico'),
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
