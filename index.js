@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 
@@ -8,7 +8,7 @@ function createWindow () {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    icon: path.join(__dirname, 'icon.ico'), // Acá le inyectamos tu icono a la ventana
+    icon: path.join(__dirname, 'icon.ico'),
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -19,40 +19,25 @@ function createWindow () {
 
 app.whenReady().then(() => {
   createWindow();
-  
-  // Apenas abre la app, busca actualizaciones en GitHub
   autoUpdater.checkForUpdatesAndNotify();
 });
 
-// EVENTO 1: Cuando encuentra una actualización disponible
-autoUpdater.on('update-available', () => {
-  dialog.showMessageBox(mainWindow, {
-    type: 'info',
-    title: 'Actualización disponible',
-    message: 'Hay una nueva versión de BlackMail Editor. Se está descargando en segundo plano...',
-    buttons: ['Entendido']
-  });
+// Permisos para abrir y guardar ventanas nativas de Windows
+ipcMain.handle('show-save-dialog', async (event, options) => {
+  return await dialog.showSaveDialog(mainWindow, options);
 });
 
-// EVENTO 2: Cuando termina de descargar la actualización
-autoUpdater.on('update-downloaded', () => {
-  dialog.showMessageBox(mainWindow, {
-    type: 'question',
-    title: 'Actualización lista',
-    message: 'La nueva versión ya se descargó. ¿Querés reiniciar la aplicación ahora para instalarla?',
-    buttons: ['Reiniciar y Actualizar', 'Más tarde']
-  }).then((result) => {
-    if (result.response === 0) {
-      autoUpdater.quitAndInstall();
-    }
-  });
+ipcMain.handle('show-open-dialog', async (event, options) => {
+  return await dialog.showOpenDialog(mainWindow, options);
 });
 
-// EVENTO 3: Por si hay un error en la actualización
-autoUpdater.on('error', (error) => {
-  console.log('Error al actualizar: ', error);
+// Ruta oculta de AppData para guardar los thumbnails sin romper el instalador
+ipcMain.handle('get-user-data-path', () => {
+  return app.getPath('userData');
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
+autoUpdater.on('update-available', () => { if (mainWindow) mainWindow.webContents.send('update-available'); });
+autoUpdater.on('update-downloaded', () => { if (mainWindow) mainWindow.webContents.send('update-downloaded'); });
+ipcMain.on('restart-app', () => { autoUpdater.quitAndInstall(); });
+autoUpdater.on('error', (error) => { console.log('Error al actualizar: ', error); });
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
