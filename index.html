@@ -4,15 +4,18 @@
   <meta charset="UTF-8">
   <title>BlackMail Editor</title>
   <style>
+    /* BORDES RECTOS Y ESTÉTICA FLAT */
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; background-color: #2b2b2b; color: #fff; overflow: hidden; }
     
     #topbar { display: flex; align-items: center; justify-content: space-between; background-color: #1e1e1e; padding: 10px 20px; border-bottom: 1px solid #444; z-index: 10001; }
     #main-area { display: flex; flex: 1; overflow: hidden; }
     
-    #canvas-container { flex: 1; display: flex; justify-content: center; padding: 40px; overflow-y: auto; position: relative; transition: background-color 0.3s; }
-    #newsletter-canvas { width: 850px; min-height: 800px; background-color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative; transition: transform 0.3s ease; }
+    /* CORRECCIÓN: El contenedor ahora permite scroll horizontal y no aplasta al lienzo */
+    #canvas-container { flex: 1; overflow: auto; padding: 40px; position: relative; transition: background-color 0.3s; }
+    #newsletter-canvas { width: 850px; margin: 0 auto; flex-shrink: 0; min-height: 800px; background-color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative; transition: transform 0.3s ease; transform-origin: top center; }
+    
     #selection-box { position: absolute; border: 1px solid #0d99ff; background-color: rgba(13, 153, 255, 0.2); display: none; pointer-events: none; z-index: 9999; }
-    #sidebar { width: 320px; background-color: #1e1e1e; border-left: 1px solid #444; padding: 20px; display: flex; flex-direction: column; overflow-y: auto; z-index: 10000; }
+    #sidebar { width: 320px; background-color: #1e1e1e; border-left: 1px solid #444; padding: 20px; display: flex; flex-direction: column; overflow-y: auto; z-index: 10000; flex-shrink: 0; }
     
     h2 { font-size: 16px; margin-top: 0; margin-bottom: 15px; color: #ccc; }
     
@@ -77,6 +80,7 @@
     .spinner { width: 40px; height: 40px; border: 4px solid rgba(13, 153, 255, 0.3); border-top: 4px solid #0d99ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px auto; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+    /* PANTALLA DE INICIO ESTILO ADOBE */
     #welcome-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a1a1a; display: flex; z-index: 100000; }
     .ws-sidebar { width: 260px; background: #252525; padding: 40px 20px; border-right: 1px solid #333; display: flex; flex-direction: column; gap: 15px; }
     .ws-sidebar h1 { margin: 0 0 30px 0; font-size: 20px; color: #fff; display: flex; align-items: center; gap: 10px; }
@@ -90,9 +94,9 @@
     .ws-recents-title { font-size: 14px; color: #888; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #333; }
     
     .recent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
-    .recent-card { background: #2a2a2a; border: 1px solid #333; display: flex; flex-direction: column; cursor: pointer; transition: background 0.2s, border-color 0.2s; border-radius: 0px; height: 180px; }
+    .recent-card { background: #2a2a2a; border: 1px solid #333; display: flex; flex-direction: column; cursor: pointer; transition: background 0.2s, border-color 0.2s; border-radius: 0px; height: 200px; }
     .recent-card:hover { background: #333; border-color: #0d99ff; }
-    .recent-thumb { height: 120px; background: #222; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #333; overflow: hidden; position: relative; }
+    .recent-thumb { height: 140px; background: #222; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #333; overflow: hidden; position: relative; }
     .recent-info { padding: 15px; display: flex; flex-direction: column; gap: 5px; }
     .recent-name { font-size: 13px; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .recent-date { font-size: 11px; color: #888; }
@@ -126,7 +130,7 @@
 
   <div id="topbar">
     <div style="display:flex; align-items:center; gap: 15px;">
-      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlackMail Editor <span style="font-size:12px; color:#0d99ff; font-weight:normal; margin-left:5px;">v0.4.3</span></span>
+      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlackMail Editor <span style="font-size:12px; color:#0d99ff; font-weight:normal; margin-left:5px;">v0.4.4</span></span>
       <label style="font-size: 13px; color: #0d99ff; font-weight: bold;">Asunto:</label>
       <input type="text" id="email-subject" placeholder="Ej: ¡Llegaron las ofertas!" style="width: 250px; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 0px; outline:none;" onchange="saveState()">
     </div>
@@ -161,7 +165,7 @@
       <button class="tool-btn" onclick="addBlock('text')"><img src="icon-text.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Agregar Texto</button>
       <button class="tool-btn" onclick="addBlock('gif')"><img src="icon-gif.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Agregar GIF</button>
       <button class="tool-btn" onclick="addBlock('spacer')"><img src="icon-spacer.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Tabla Vacía</button>
-      
+
       <div id="properties-panel">
         <h2 style="margin-bottom: 10px; color: #0d99ff;">Propiedades</h2>
         <div id="multi-select-msg">Varios bloques seleccionados.<br><small>Arrastrá desde las esquinas para cambiar el tamaño en conjunto.</small></div>
@@ -269,12 +273,11 @@
           </div>
         </div>
       </div>
-      <div style="font-size:10px; color:#666; text-align:center; margin-top:15px;">v0.4.3</div>
+      <div style="font-size:10px; color:#666; text-align:center; margin-top:15px;">v0.4.4</div>
     </div>
   </div>
 
   <script>
-    // Variables de Node integradas para manejo de archivos locales nativos
     let fs, path;
     try {
         fs = require('fs');
@@ -318,18 +321,17 @@
       document.getElementById('welcome-screen').style.display = 'none';
     }
 
-    // MOTOR DE CAPTURAS NATIVO (Convierte el Canvas a Imagen real limpiando los bordes)
+    // CORRECCIÓN DE LA CAPTURA: Toma la altura total del lienzo
     function takeScreenshot(callback) {
         const canvasNode = document.getElementById('newsletter-canvas');
         const width = 850;
-        const height = canvasNode.offsetHeight;
+        const height = canvasNode.scrollHeight; 
         
         clearSelection();
         let clone = canvasNode.cloneNode(true);
         clone.style.transform = 'none';
         clone.querySelectorAll('#selection-box, #multi-selection-box, .resize-handle, .delete-btn').forEach(el => el.remove());
         
-        // Removemos iconos UI internos para no romper la imagen
         clone.querySelectorAll('img').forEach(img => {
             if (img.src.includes('icon-') || (img.src.startsWith('file://') && !img.src.startsWith('data:image'))) {
                 img.remove();
@@ -375,7 +377,8 @@
          
          let thumbHtml = '<div style="font-size:40px; color:#444;">📄</div>';
          if (r.thumbPath) {
-             thumbHtml = `<img src="file:///${r.thumbPath.replace(/\\/g, '/')}?t=${Date.now()}" style="width:100%; height:100%; object-fit:cover; object-position:top;">`;
+             // CORRECCIÓN: object-fit contain para ver el newsletter entero
+             thumbHtml = `<img src="file:///${r.thumbPath.replace(/\\/g, '/')}?t=${Date.now()}" style="width:100%; height:100%; object-fit:contain; object-position:center; background:#fff; padding:5px; box-sizing:border-box;">`;
          }
 
          card.innerHTML = `<div class="recent-thumb">${thumbHtml}</div>
@@ -643,6 +646,13 @@
       saveState(); 
       renderPalette(); 
       renderRecents();
+    }
+
+    function rgbToHex(rgb) {
+      if (!rgb || rgb.startsWith('#')) return rgb || '#000000';
+      let m = rgb.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
+      if (m) return "#" + ("0" + parseInt(m[1],10).toString(16)).slice(-2) + ("0" + parseInt(m[2],10).toString(16)).slice(-2) + ("0" + parseInt(m[3],10).toString(16)).slice(-2);
+      return '#000000'; 
     }
 
     function updateCanvasHeight() {
@@ -973,7 +983,7 @@
               updateMultiSelectionBoundingBox();
             }
           }
-          function onMouseUp() { document.body.style.userSelect = 'auto'; selectedBlocks.forEach(b => b.classList.remove('dragging')); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); updateCanvasHeight(); updateMultiSelectionBoundingBox(); saveState(); }
+          function onMouseUp() { document.body.style.userSelect = 'auto'; selectedBlocks.forEach(b => b.classList.remove('dragging')); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); updateCanvasHeight(); saveState(); }
           document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp);
         }
       });
@@ -982,7 +992,6 @@
       return block; 
     }
 
-    // FLUJO DE GUARDADO Y APERTURA NATIVO POR IPC
     async function saveProject() {
       saveState(); 
       const currentState = historyArr[historyIndex];
@@ -991,14 +1000,12 @@
       let defaultName = (subjectInput.value.trim() || 'Mi_Proyecto') + '.bmail';
       
       if (!ipcRenderer) {
-          // Fallback para Web si no encuentra Electron
           const blob = new Blob([JSON.stringify(projectData)], { type: 'application/json' });
           const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url;
           a.download = defaultName; a.click(); URL.revokeObjectURL(url);
           return;
       }
 
-      // Dialogo Nativo de Windows
       const result = await ipcRenderer.invoke('show-save-dialog', {
           title: 'Guardar Proyecto BlackMail',
           defaultPath: defaultName,
@@ -1008,11 +1015,10 @@
       if (result.canceled || !result.filePath) return;
       
       const filePath = result.filePath;
-      const fileName = path.basename(filePath, '.bmail'); // Consigue el nombre exacto
+      const fileName = path.basename(filePath, '.bmail'); 
 
       fs.writeFileSync(filePath, JSON.stringify(projectData), 'utf-8');
 
-      // Toma captura y gestiona los 10 recientes
       takeScreenshot((base64Img) => {
           let recents = JSON.parse(localStorage.getItem('bmail_recents')) || [];
           recents = recents.filter(r => r.id !== currentProjectId);
@@ -1035,7 +1041,6 @@
           if(recents.length > 10) recents = recents.slice(0, 10);
           localStorage.setItem('bmail_recents', JSON.stringify(recents));
           
-          // Limpia las miniaturas viejas de la carpeta
           if (userDataPath) {
               const thumbsDir = path.join(userDataPath, 'thumbnails');
               if (fs.existsSync(thumbsDir)) {
@@ -1069,13 +1074,12 @@
           const fileContent = fs.readFileSync(result.filePaths[0], 'utf-8');
           const projectData = JSON.parse(fileContent);
           if (projectData.subject) subjectInput.value = projectData.subject;
-          currentProjectId = Date.now().toString(); // Asigna ID único al cargar
+          currentProjectId = Date.now().toString(); 
           if (projectData.blocks) { loadState(projectData.blocks); saveState(); }
           document.getElementById('welcome-screen').style.display = 'none'; 
       } catch (err) { alert("El archivo .bmail no es válido o está dañado."); }
     }
 
-    // Fallback oculto por si se abre sin electron
     function handleProjectUpload(e) {
       const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
       reader.onload = function(event) {
