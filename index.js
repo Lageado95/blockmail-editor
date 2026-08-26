@@ -37,6 +37,13 @@ ipcMain.handle('get-user-data-path', () => {
 
 autoUpdater.on('update-available', () => { if (mainWindow) mainWindow.webContents.send('update-available'); });
 autoUpdater.on('update-downloaded', () => { if (mainWindow) mainWindow.webContents.send('update-downloaded'); });
+
+// RED DE SEGURIDAD: Avisar al HTML si la descarga falla
+autoUpdater.on('error', (error) => { 
+  console.log('Error al actualizar: ', error);
+  if (mainWindow) mainWindow.webContents.send('update-error', error == null ? "Error desconocido" : (error.stack || error).toString());
+});
+
 ipcMain.on('restart-app', () => { autoUpdater.quitAndInstall(); });
-autoUpdater.on('error', (error) => { console.log('Error al actualizar: ', error); });
+
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
