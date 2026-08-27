@@ -10,7 +10,7 @@ function createWindow () {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    icon: path.join(__dirname, 'app-logo.ico'),
+    icon: path.join(__dirname, 'doc-logo.ico'), // Ajustado a tu asset principal
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -32,7 +32,12 @@ function createWindow () {
     if (args.length > 1) {
       const filePath = args[args.length - 1];
       if (filePath.endsWith('.bmail')) {
-        mainWindow.webContents.send('open-external-file', filePath);
+        // FIX: Comprueba que exista físicamente para evitar abrir "fantasmas"
+        if (fs.existsSync(filePath)) {
+          mainWindow.webContents.send('open-external-file', filePath);
+        } else {
+          console.log("El archivo no existe más en el disco.");
+        }
       }
     }
   });
@@ -49,8 +54,15 @@ ipcMain.handle('get-user-data-path', () => { return app.getPath('userData'); });
 
 // Leer y guardar silenciosamente (Para el botón "Guardar" normal)
 ipcMain.handle('read-file', (event, filePath) => {
-  try { return fs.readFileSync(filePath, 'utf-8'); } catch(e) { return null; }
+  try { 
+    // FIX: Validación estricta contra el disco. Si se eliminó, devuelve null.
+    if (!fs.existsSync(filePath)) return null;
+    return fs.readFileSync(filePath, 'utf-8'); 
+  } catch(e) { 
+    return null; 
+  }
 });
+
 ipcMain.handle('save-file', (event, filePath, content) => {
   try { fs.writeFileSync(filePath, content, 'utf-8'); return true; } catch(e) { return false; }
 });
@@ -71,7 +83,12 @@ app.on('second-instance', (event, commandLine, workingDirectory) => {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.focus();
     const filePath = commandLine[commandLine.length - 1];
-    if (filePath.endsWith('.bmail')) mainWindow.webContents.send('open-external-file', filePath);
+    if (filePath.endsWith('.bmail')) {
+      // FIX: Validación para la segunda instancia también
+      if (fs.existsSync(filePath)) {
+        mainWindow.webContents.send('open-external-file', filePath);
+      }
+    }
   }
 });
 

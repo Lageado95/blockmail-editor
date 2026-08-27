@@ -409,14 +409,17 @@
     
     .block.selected .delete-btn { display: block; }
     
+    /* NODOS DE REDIMENSION (CORREGIDOS) */
     .resize-handle { 
       position: absolute; 
-      width: 8px; 
-      height: 8px; 
-      background-color: #fff; 
-      border: 1px solid #0d99ff; 
+      width: 12px; 
+      height: 12px; 
+      background-color: #0d99ff; 
+      border: 2px solid #fff; 
+      border-radius: 50%;
       display: none; 
       z-index: 150; 
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
     }
     
     body.single-selection .block.selected .resize-handle { display: block; }
@@ -447,14 +450,16 @@
     .mh-ne { top: -6px; right: -6px; cursor: nesw-resize; } 
     .mh-sw { bottom: -6px; left: -6px; cursor: nesw-resize; } 
     .mh-se { bottom: -6px; right: -6px; cursor: nwse-resize; }
-    .nw { top: -5px; left: -5px; cursor: nwse-resize; } 
-    .n { top: -5px; left: calc(50% - 4px); cursor: ns-resize; } 
-    .ne { top: -5px; right: -5px; cursor: nesw-resize; } 
-    .e { top: calc(50% - 4px); right: -5px; cursor: ew-resize; } 
-    .se { bottom: -5px; right: -5px; cursor: nwse-resize; } 
-    .s { bottom: -5px; left: calc(50% - 4px); cursor: ns-resize; } 
-    .sw { bottom: -5px; left: -5px; cursor: nesw-resize; } 
-    .w { top: calc(50% - 4px); left: -5px; cursor: ew-resize; }
+    
+    /* POSICIONAMIENTO DE NODOS (Ajustado a los 12px) */
+    .nw { top: -8px; left: -8px; cursor: nwse-resize; } 
+    .n { top: -8px; left: calc(50% - 8px); cursor: ns-resize; } 
+    .ne { top: -8px; right: -8px; cursor: nesw-resize; } 
+    .e { top: calc(50% - 8px); right: -8px; cursor: ew-resize; } 
+    .se { bottom: -8px; right: -8px; cursor: nwse-resize; } 
+    .s { bottom: -8px; left: calc(50% - 8px); cursor: ns-resize; } 
+    .sw { bottom: -8px; left: -8px; cursor: nesw-resize; } 
+    .w { top: calc(50% - 8px); left: -8px; cursor: ew-resize; }
 
     /* VISTAS PREVIAS */
     .mobile-view { transform: scale(0.47058); transform-origin: top center; pointer-events: none; }
@@ -561,7 +566,6 @@
 </head>
 <body onclick="document.getElementById('save-dropdown').style.display='none'">
 
-  <!-- MODAL DE CIERRE DE PESTAÑA / APP -->
   <div id="close-tab-modal" class="modal-overlay" style="display: none;">
     <div class="modal-box">
       <div class="modal-title">Cambios sin guardar</div>
@@ -572,7 +576,6 @@
     </div>
   </div>
 
-  <!-- PANTALLA DE INICIO (HOME) -->
   <div id="welcome-screen">
     <div class="ws-sidebar">
       <h1><img src="app-logo.ico" style="width: 32px; height: 32px; object-fit: contain;" alt="" onerror="this.style.display='none'"> BlockMail</h1>
@@ -586,7 +589,6 @@
     </div>
   </div>
 
-  <!-- MODAL DE ACTUALIZACIÓN NATIVA -->
   <div id="update-modal" class="modal-overlay" style="display: none;">
     <div class="modal-box">
       <div id="update-spinner" class="spinner"></div>
@@ -598,7 +600,6 @@
     </div>
   </div>
 
-  <!-- BARRA SUPERIOR PRINCIPAL -->
   <div id="topbar">
     <div style="display:flex; align-items:center; gap: 15px;">
       <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlockMail Editor</span>
@@ -627,10 +628,8 @@
     </div>
   </div>
 
-  <!-- BARRA DE PESTAÑAS (TABS) -->
   <div id="tabs-bar"></div>
 
-  <!-- ÁREA DE TRABAJO -->
   <div id="main-area">
     <div id="canvas-container">
       <div id="newsletter-canvas">
@@ -644,7 +643,6 @@
       </div>
     </div>
 
-    <!-- PANEL LATERAL DE HERRAMIENTAS Y PROPIEDADES -->
     <div id="sidebar">
       <h2>Bloques</h2>
       <button class="tool-btn" onclick="addBlock('image')"><img src="icon-image.png" class="btn-icon" alt="" onerror="this.style.display='none'"> Agregar Imagen</button>
@@ -701,7 +699,6 @@
             </div>
           </div>
           
-          <!-- PANEL DE TEXTO Y COLORES TIPOGRÁFICOS -->
           <div id="text-props">
             <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px;">Todo el Cuadro</label>
             <select id="prop-font-family" class="media-input" style="margin-top:0;" onchange="updateTextProperties()">
@@ -1176,7 +1173,8 @@
     
     let selectedBlocks = new Set(); 
     let clipboard = []; 
-    const SNAP_DIST = 10; 
+    // FIX: Incremento del valor de snap magnético
+    const SNAP_DIST = 15; 
     let savedRange = null;
 
     let isDarkMode = false; 
@@ -1254,6 +1252,9 @@
     function removeFromSelection(block) { selectedBlocks.delete(block); block.classList.remove('selected'); const textContent = block.querySelector('.block-text'); if (textContent) { textContent.classList.remove('editing'); textContent.contentEditable = false; } updatePropertiesUI(); updateMultiSelectionBoundingBox(); }
 
     function updatePropertiesUI() { 
+      // FIX CRÍTICO: Agregar clase al body para activar la visibilidad de los nodos de redimensión
+      document.body.classList.toggle('single-selection', selectedBlocks.size === 1);
+      
       if (selectedBlocks.size === 0) { 
         propertiesPanel.style.display = 'none'; 
       } else if (selectedBlocks.size === 1) { 
@@ -1796,11 +1797,9 @@
       if (currentRow) rows.push(currentRow);
 
       let attachments = [];
-      let htmlTable = `<!-- Wrapper global -->
-<table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="width:100%; background-color:#ffffff; margin:0; padding:0;">
+      let htmlTable = `<table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="width:100%; background-color:#ffffff; margin:0; padding:0;">
   <tr>
     <td align="center" valign="top" style="padding: 20px 0;">
-      <!-- Estructura principal -->
       <table width="850" cellpadding="0" cellspacing="0" border="0" align="center" style="width:850px; max-width:850px; background-color:#ffffff; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; margin:0 auto;">`;
 
       let currentY = 0;
@@ -1811,7 +1810,6 @@
         }
         
         htmlTable += `<tr><td width="850" style="width:850px; padding:0; margin:0;">
-          <!-- Fila independiente para proteger las columnas -->
           <table width="850" cellpadding="0" cellspacing="0" border="0" style="width:850px; max-width:850px; table-layout:fixed; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt;">
             <tr>`;
             
