@@ -824,6 +824,40 @@
              ipcRenderer.send('force-close-app');
          }
       });
+
+      // FIX: Escuchar eventos de actualización del proceso principal
+      ipcRenderer.on('update-available', (event, info) => {
+         document.getElementById('update-modal').style.display = 'flex';
+         document.getElementById('update-title').innerText = "¡Nueva actualización!";
+         document.getElementById('update-text').innerText = "Descargando la última versión...";
+         document.getElementById('update-spinner').style.display = 'block';
+         document.getElementById('update-btn').style.display = 'none';
+         document.getElementById('update-later-btn').style.display = 'none';
+         document.getElementById('update-details').style.display = 'none';
+      });
+
+      ipcRenderer.on('update-downloaded', (event, info) => {
+         document.getElementById('update-modal').style.display = 'flex';
+         document.getElementById('update-title').innerText = "¡Actualización lista!";
+         document.getElementById('update-text').innerText = "Se descargó correctamente. Reiniciá para aplicar los cambios.";
+         document.getElementById('update-spinner').style.display = 'none';
+         document.getElementById('update-btn').style.display = 'flex';
+         document.getElementById('update-later-btn').style.display = 'flex';
+         if (info && info.version) {
+            document.getElementById('update-details').style.display = 'block';
+            document.getElementById('update-details').innerText = "Nueva versión: " + info.version;
+         }
+      });
+      
+      ipcRenderer.on('update-error', (event, err) => {
+         console.error("Error al actualizar:", err);
+         document.getElementById('update-modal').style.display = 'none';
+      });
+    }
+
+    // FIX: Función para reiniciar e instalar
+    function restartApp() {
+      if (ipcRenderer) ipcRenderer.send('restart-app');
     }
 
     let isAppClosing = false;
@@ -1798,19 +1832,19 @@
 
       let attachments = [];
       let htmlTable = `<table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="width:100%; background-color:#ffffff; margin:0; padding:0;">
-  <tr>
-    <td align="center" valign="top" style="padding: 20px 0;">
-      <table width="850" cellpadding="0" cellspacing="0" border="0" align="center" style="width:850px; max-width:850px; background-color:#ffffff; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; margin:0 auto;">`;
+<tr>
+<td align="center" valign="top" style="padding: 20px 0;">
+  <table width="850" cellpadding="0" cellspacing="0" border="0" align="center" style="width:850px; min-width:850px; max-width:850px; background-color:#ffffff; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; margin:0 auto;">`;
 
       let currentY = 0;
       rows.forEach(row => {
         if (row.top > currentY) { 
            let gap = row.top - currentY; 
-           htmlTable += `<tr><td width="850" height="${gap}" style="width:850px; height:${gap}px; font-size:1px; line-height:1px; padding:0; margin:0;">&nbsp;</td></tr>`; 
+           htmlTable += `<tr><td width="850" height="${gap}" style="width:850px; min-width:850px; height:${gap}px; font-size:1px; line-height:1px; padding:0; margin:0;">&nbsp;</td></tr>`; 
         }
         
-        htmlTable += `<tr><td width="850" style="width:850px; padding:0; margin:0;">
-          <table width="850" cellpadding="0" cellspacing="0" border="0" style="width:850px; max-width:850px; table-layout:fixed; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt;">
+        htmlTable += `<tr><td width="850" style="width:850px; min-width:850px; padding:0; margin:0;">
+          <table width="850" cellpadding="0" cellspacing="0" border="0" style="width:850px; min-width:850px; max-width:850px; table-layout:fixed; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt;">
             <tr>`;
             
         row.blocks.sort((a, b) => a.x - b.x); 
@@ -1833,16 +1867,16 @@
              if (b.css && b.css.includes('justify-content: center')) vAlignHtml = 'middle';
              if (b.css && b.css.includes('justify-content: flex-end')) vAlignHtml = 'bottom';
              
-             htmlTable += `<td width="${safeW}" valign="top" style="width:${safeW}px; max-width:${safeW}px; padding:0; padding-top:${yOffset}px; margin:0;">`;
+             htmlTable += `<td width="${safeW}" valign="top" style="width:${safeW}px; min-width:${safeW}px; max-width:${safeW}px; padding:0; padding-top:${yOffset}px; margin:0;">`;
              htmlTable += `<table width="100%" height="${b.h}" cellpadding="0" cellspacing="0" border="0" style="height:${b.h}px; max-height:${b.h}px; width:100%; border-collapse:collapse;"><tr><td valign="${vAlignHtml}" style="height:${b.h}px; padding:0; margin:0;">`;
              
              if (b.type === 'image' || b.type === 'gif') {
                 let imgTag = '';
                 if (b.src && b.src.startsWith('data:image')) {
                     let cid = 'img_' + attachments.length + '@newsletter'; let mimeType = b.src.split(';')[0].split(':')[1]; let base64Data = b.src.split(',')[1]; attachments.push({ cid, mimeType, base64Data });
-                    imgTag = `<img src="cid:${cid}" width="${safeW}" height="${b.h}" style="display:block; width:${safeW}px; height:${b.h}px; border:0; outline:none; text-decoration:none;" />`;
+                    imgTag = `<img src="cid:${cid}" width="${safeW}" height="${b.h}" style="display:block; width:${safeW}px; min-width:${safeW}px; height:${b.h}px; border:0; outline:none; text-decoration:none;" />`;
                 } else if (b.src) { 
-                    imgTag = `<img src="${b.src}" width="${safeW}" height="${b.h}" style="display:block; width:${safeW}px; height:${b.h}px; border:0; outline:none; text-decoration:none;" />`; 
+                    imgTag = `<img src="${b.src}" width="${safeW}" height="${b.h}" style="display:block; width:${safeW}px; min-width:${safeW}px; height:${b.h}px; border:0; outline:none; text-decoration:none;" />`; 
                 } else { 
                     imgTag = `<div style="width:${safeW}px; height:${b.h}px; background:#e0e0e0;"></div>`; 
                 }
@@ -1881,30 +1915,30 @@ Content-Type: text/html; charset=utf-8
 Content-Transfer-Encoding: 8bit
 
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<!-- [MODO OSCURO] -->
-<meta name="color-scheme" content="light dark">
-<meta name="supported-color-schemes" content="light dark">
-<style type="text/css">
-  body, table, td, a, p, div, span { font-family: ${defaultFont}; }
-  @media (prefers-color-scheme: dark) {
-    body, .dark-mode-bg { background-color: #1a1a1a !important; }
-    td, p, div, span, a { color: #ffffff !important; }
-  }
-</style>
-<!-- [SOLUCIÓN OUTLOOK] -->
-<!--[if mso]>
-<style type="text/css">
-  body, table, td, p, a, div, span { font-family: ${defaultFont} !important; }
-</style>
-<![endif]-->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>${subjectStr}</title>
+  <!--[if mso]>
+  <xml>
+    <o:OfficeDocumentSettings>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+    </o:OfficeDocumentSettings>
+  </xml>
+  <![endif]-->
+  <style>
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; }
+    img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; display: block; }
+    table { border-collapse: collapse !important; }
+    body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #ffffff; }
+  </style>
 </head>
-<body class="dark-mode-bg" style="margin:0; padding:0; background-color:#ffffff; font-family: ${defaultFont};">
-${htmlTable}
+<body style="margin:0; padding:0; background-color:#ffffff;">
+  ${htmlTable}
 </body>
 </html>
 
@@ -1918,6 +1952,14 @@ ${att.base64Data}
 
 `; });
       eml += `--${boundary}--
+`;
+      
+      const blob = new Blob([eml], { type: 'message/rfc822' }); const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'Newsletter.eml'; a.click(); URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>     eml += `--${boundary}--
 `;
       
       const blob = new Blob([eml], { type: 'message/rfc822' }); const url = URL.createObjectURL(blob);
