@@ -1880,9 +1880,33 @@ Content-Type: multipart/related; boundary="${boundary}"
 Content-Type: text/html; charset=utf-8
 Content-Transfer-Encoding: 8bit
 
-<!DOCTYPE html><html><body style="margin:0; padding:0; background-color:#ffffff;">
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<!-- [MODO OSCURO] -->
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<style type="text/css">
+  body, table, td, a, p, div, span { font-family: ${defaultFont}; }
+  @media (prefers-color-scheme: dark) {
+    body, .dark-mode-bg { background-color: #1a1a1a !important; }
+    td, p, div, span, a { color: #ffffff !important; }
+  }
+</style>
+<!-- [SOLUCIÓN OUTLOOK] -->
+<!--[if mso]>
+<style type="text/css">
+  body, table, td, p, a, div, span { font-family: ${defaultFont} !important; }
+</style>
+<![endif]-->
+</head>
+<body class="dark-mode-bg" style="margin:0; padding:0; background-color:#ffffff; font-family: ${defaultFont};">
 ${htmlTable}
-</body></html>
+</body>
+</html>
 
 `;
       attachments.forEach(att => { eml += `--${boundary}
