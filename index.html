@@ -409,7 +409,7 @@
     
     .block.selected .delete-btn { display: block; }
     
-    /* NODOS DE REDIMENSION (CORREGIDOS) */
+    /* NODOS DE REDIMENSION */
     .resize-handle { 
       position: absolute; 
       width: 12px; 
@@ -451,7 +451,7 @@
     .mh-sw { bottom: -6px; left: -6px; cursor: nesw-resize; } 
     .mh-se { bottom: -6px; right: -6px; cursor: nwse-resize; }
     
-    /* POSICIONAMIENTO DE NODOS (Ajustado a los 12px) */
+    /* POSICIONAMIENTO DE NODOS */
     .nw { top: -8px; left: -8px; cursor: nwse-resize; } 
     .n { top: -8px; left: calc(50% - 8px); cursor: ns-resize; } 
     .ne { top: -8px; right: -8px; cursor: nesw-resize; } 
@@ -578,7 +578,7 @@
 
   <div id="welcome-screen">
     <div class="ws-sidebar">
-      <h1><img src="app-logo.ico" style="width: 32px; height: 32px; object-fit: contain;" alt="" onerror="this.style.display='none'"> BlockMail</h1>
+      <h1><img src="app-logo.ico" style="width: 32px; height: 32px; object-fit: contain;" alt="" onerror="this.style.display='none'"> BlockMail <small id="ws-app-version" style="font-size: 12px; color: #888; font-weight: normal;"></small></h1>
       <button class="ws-btn-primary" onclick="newProject()">Archivo nuevo</button>
       <button class="ws-btn-secondary" onclick="triggerLoadProject()">Abrir</button>
     </div>
@@ -602,7 +602,8 @@
 
   <div id="topbar">
     <div style="display:flex; align-items:center; gap: 15px;">
-      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:20px;">BlockMail Editor</span>
+      <span style="font-weight:bold; color:#fff; font-size:16px; margin-right:5px;">BlockMail Editor</span>
+      <span id="app-version" style="font-size:12px; color:#0d99ff; font-weight:normal; margin-right:20px;"></span>
       <label style="font-size: 13px; color: #0d99ff; font-weight: bold;">Asunto:</label>
       <input type="text" id="email-subject" placeholder="Ej: ¡Llegaron las ofertas!" style="width: 250px; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 0px; outline:none;" oninput="markUnsaved()">
     </div>
@@ -796,6 +797,15 @@
     let userDataPath = '';
     
     if (ipcRenderer && fs && path) {
+      // NUEVO: Pedir y mostrar la versión al cargar
+      ipcRenderer.invoke('get-app-version').then(version => {
+         const vStr = "v" + version;
+         const topAppVersion = document.getElementById('app-version');
+         const wsAppVersion = document.getElementById('ws-app-version');
+         if(topAppVersion) topAppVersion.innerText = vStr;
+         if(wsAppVersion) wsAppVersion.innerText = vStr;
+      });
+
       ipcRenderer.invoke('get-user-data-path').then(p => {
          userDataPath = p;
          const thumbsDir = path.join(userDataPath, 'thumbnails');
@@ -825,7 +835,7 @@
          }
       });
 
-      // FIX: Escuchar eventos de actualización del proceso principal
+      // RESTAURADO: Estos son los escuchadores que faltaban para mostrar el cartel de actualización
       ipcRenderer.on('update-available', (event, info) => {
          document.getElementById('update-modal').style.display = 'flex';
          document.getElementById('update-title').innerText = "¡Nueva actualización!";
@@ -855,7 +865,7 @@
       });
     }
 
-    // FIX: Función para reiniciar e instalar
+    // RESTAURADO: Función para el botón del cartel
     function restartApp() {
       if (ipcRenderer) ipcRenderer.send('restart-app');
     }
@@ -1952,14 +1962,6 @@ ${att.base64Data}
 
 `; });
       eml += `--${boundary}--
-`;
-      
-      const blob = new Blob([eml], { type: 'message/rfc822' }); const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'Newsletter.eml'; a.click(); URL.revokeObjectURL(url);
-    }
-  </script>
-</body>
-</html>     eml += `--${boundary}--
 `;
       
       const blob = new Blob([eml], { type: 'message/rfc822' }); const url = URL.createObjectURL(blob);
