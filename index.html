@@ -231,7 +231,7 @@
     }
     input[type=number] { -moz-appearance: textfield; }
     
-    /* INPUTS NUMÉRICOS GRÁFICOS (MEJORADOS) */
+    /* INPUTS NUMÉRICOS GRÁFICOS */
     .num-wrap { 
       position: relative; 
       width: 70px; 
@@ -797,7 +797,6 @@
     let userDataPath = '';
     
     if (ipcRenderer && fs && path) {
-      // NUEVO: Pedir y mostrar la versión al cargar
       ipcRenderer.invoke('get-app-version').then(version => {
          const vStr = "v" + version;
          const topAppVersion = document.getElementById('app-version');
@@ -835,7 +834,6 @@
          }
       });
 
-      // RESTAURADO: Estos son los escuchadores que faltaban para mostrar el cartel de actualización
       ipcRenderer.on('update-available', (event, info) => {
          document.getElementById('update-modal').style.display = 'flex';
          document.getElementById('update-title').innerText = "¡Nueva actualización!";
@@ -865,7 +863,6 @@
       });
     }
 
-    // RESTAURADO: Función para el botón del cartel
     function restartApp() {
       if (ipcRenderer) ipcRenderer.send('restart-app');
     }
@@ -1124,7 +1121,6 @@
     async function saveActiveProject(forceSaveAs) {
       if (activeProjectIndex < 0) return false;
       
-      // Guardar el estado interno actual
       if(!isRestoring) {
           historyArr = historyArr.slice(0, historyIndex + 1);
           let currentState = Array.from(document.querySelectorAll('.block')).map(b => ({
@@ -1217,7 +1213,6 @@
     
     let selectedBlocks = new Set(); 
     let clipboard = []; 
-    // FIX: Incremento del valor de snap magnético
     const SNAP_DIST = 15; 
     let savedRange = null;
 
@@ -1296,7 +1291,6 @@
     function removeFromSelection(block) { selectedBlocks.delete(block); block.classList.remove('selected'); const textContent = block.querySelector('.block-text'); if (textContent) { textContent.classList.remove('editing'); textContent.contentEditable = false; } updatePropertiesUI(); updateMultiSelectionBoundingBox(); }
 
     function updatePropertiesUI() { 
-      // FIX CRÍTICO: Agregar clase al body para activar la visibilidad de los nodos de redimensión
       document.body.classList.toggle('single-selection', selectedBlocks.size === 1);
       
       if (selectedBlocks.size === 0) { 
@@ -1812,17 +1806,43 @@
       return block; 
     }
     
+    // ==========================================
+    // EXPORTACIÓN RESPONSIVE FLUIDA AL 100%
+    // ==========================================
     function exportEML() {
       clearSelection();
       let subjectStr = subjectInput.value.trim(); if (!subjectStr) subjectStr = "Mi Nuevo Newsletter";
+      
       let blocks = Array.from(document.querySelectorAll('.block')).map(b => {
         let tEl = b.querySelector('.block-text');
         let htmlContent = tEl ? tEl.innerHTML : '';
         if (htmlContent.includes('icon-text.png') || htmlContent === 'Doble clic acá para editar el texto.') {
             htmlContent = ''; 
         }
-        return { type: b.dataset.type, x: parseInt(b.style.left || 0), y: parseInt(b.style.top || 0), w: b.offsetWidth, h: b.offsetHeight, src: b.dataset.src || '', href: b.dataset.href || '', html: htmlContent, css: tEl ? tEl.style.cssText : '' };
+        
+        // Extraemos las propiedades nativas para el cálculo fluido
+        let fsVal = 14, lhVal = 20, ptVal = 10, pxVal = 15;
+        if (tEl) {
+            fsVal = parseInt(tEl.style.fontSize) || 14;
+            lhVal = parseInt(tEl.style.lineHeight) || (fsVal * 1.2) || 20;
+            ptVal = parseInt(tEl.style.paddingTop) || 10;
+            pxVal = parseInt(tEl.style.paddingLeft) || 15;
+        }
+
+        return { 
+            type: b.dataset.type, 
+            x: parseInt(b.style.left || 0), 
+            y: parseInt(b.style.top || 0), 
+            w: b.offsetWidth, 
+            h: b.offsetHeight, 
+            src: b.dataset.src || '', 
+            href: b.dataset.href || '', 
+            html: htmlContent, 
+            css: tEl ? tEl.style.cssText : '',
+            fsVal, lhVal, ptVal, pxVal 
+        };
       });
+
       if (blocks.length === 0) { alert("El lienzo está vacío. Agregá algo antes de exportar."); return; }
       
       blocks.sort((a, b) => a.y - b.y || a.x - b.x);
@@ -1844,17 +1864,18 @@
       let htmlTable = `<table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="width:100%; background-color:#ffffff; margin:0; padding:0;">
 <tr>
 <td align="center" valign="top" style="padding: 20px 0;">
-  <table width="850" cellpadding="0" cellspacing="0" border="0" align="center" style="width:850px; min-width:850px; max-width:850px; background-color:#ffffff; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; margin:0 auto;">`;
+  <!-- CONTENEDOR PRINCIPAL: Limita a 850px en PC, se adapta al 100% en celular -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" align="center" style="width:100%; max-width:850px; background-color:#ffffff; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; margin:0 auto;">`;
 
       let currentY = 0;
       rows.forEach(row => {
         if (row.top > currentY) { 
            let gap = row.top - currentY; 
-           htmlTable += `<tr><td width="850" height="${gap}" style="width:850px; min-width:850px; height:${gap}px; font-size:1px; line-height:1px; padding:0; margin:0;">&nbsp;</td></tr>`; 
+           htmlTable += `<tr><td class="fluid-gap" style="height:${gap}px; --gh:${gap}; font-size:1px; line-height:${gap}px; padding:0; margin:0;">&nbsp;</td></tr>`; 
         }
         
-        htmlTable += `<tr><td width="850" style="width:850px; min-width:850px; padding:0; margin:0;">
-          <table width="850" cellpadding="0" cellspacing="0" border="0" style="width:850px; min-width:850px; max-width:850px; table-layout:fixed; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt;">
+        htmlTable += `<tr><td style="padding:0; margin:0;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; table-layout:fixed; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt;">
             <tr>`;
             
         row.blocks.sort((a, b) => a.x - b.x); 
@@ -1862,9 +1883,11 @@
         
         row.blocks.forEach(b => {
           let startX = Math.max(currentX, b.x);
+          
           if (startX > currentX) { 
              let gap = startX - currentX; 
-             htmlTable += `<td width="${gap}" style="width:${gap}px; min-width:${gap}px; font-size:1px; line-height:1px; padding:0; margin:0; mso-line-height-rule:exactly;">&nbsp;</td>`; 
+             let percGap = Number((gap / 850 * 100).toFixed(4));
+             htmlTable += `<td width="${percGap}%" style="width:${percGap}%; font-size:1px; line-height:1px; padding:0; margin:0; mso-line-height-rule:exactly;">&nbsp;</td>`; 
           }
           
           let safeW = b.w - (startX - b.x);
@@ -1872,32 +1895,31 @@
           if (startX + safeW > 850) safeW = 850 - startX;
           
           if (safeW > 0) {
+             let percW = Number((safeW / 850 * 100).toFixed(4));
              let yOffset = b.y - row.top; 
              let vAlignHtml = 'top';
              if (b.css && b.css.includes('justify-content: center')) vAlignHtml = 'middle';
              if (b.css && b.css.includes('justify-content: flex-end')) vAlignHtml = 'bottom';
              
-             htmlTable += `<td width="${safeW}" valign="top" style="width:${safeW}px; min-width:${safeW}px; max-width:${safeW}px; padding:0; padding-top:${yOffset}px; margin:0;">`;
-             htmlTable += `<table width="100%" height="${b.h}" cellpadding="0" cellspacing="0" border="0" style="height:${b.h}px; max-height:${b.h}px; width:100%; border-collapse:collapse;"><tr><td valign="${vAlignHtml}" style="height:${b.h}px; padding:0; margin:0;">`;
+             htmlTable += `<td width="${percW}%" valign="${vAlignHtml}" class="fluid-y-offset" style="width:${percW}%; padding:0; padding-top:${yOffset}px; --yo:${yOffset}; margin:0;">`;
              
              if (b.type === 'image' || b.type === 'gif') {
                 let imgTag = '';
                 if (b.src && b.src.startsWith('data:image')) {
                     let cid = 'img_' + attachments.length + '@newsletter'; let mimeType = b.src.split(';')[0].split(':')[1]; let base64Data = b.src.split(',')[1]; attachments.push({ cid, mimeType, base64Data });
-                    imgTag = `<img src="cid:${cid}" width="${safeW}" height="${b.h}" style="display:block; width:${safeW}px; min-width:${safeW}px; height:${b.h}px; border:0; outline:none; text-decoration:none;" />`;
+                    imgTag = `<img class="resp-img" src="cid:${cid}" width="${safeW}" height="${b.h}" style="display:block; width:100%; max-width:${safeW}px; height:auto; border:0; outline:none; text-decoration:none;" />`;
                 } else if (b.src) { 
-                    imgTag = `<img src="${b.src}" width="${safeW}" height="${b.h}" style="display:block; width:${safeW}px; min-width:${safeW}px; height:${b.h}px; border:0; outline:none; text-decoration:none;" />`; 
+                    imgTag = `<img class="resp-img" src="${b.src}" width="${safeW}" height="${b.h}" style="display:block; width:100%; max-width:${safeW}px; height:auto; border:0; outline:none; text-decoration:none;" />`; 
                 } else { 
-                    imgTag = `<div style="width:${safeW}px; height:${b.h}px; background:#e0e0e0;"></div>`; 
+                    imgTag = `<div class="fluid-spacer" style="width:100%; height:${b.h}px; --sh:${b.h}; background:#e0e0e0;"></div>`; 
                 }
                 if (b.href) htmlTable += `<a href="${b.href}" target="_blank" style="text-decoration:none; display:block;">${imgTag}</a>`; else htmlTable += imgTag;
              } else if (b.type === 'text') {
-                htmlTable += `<div style="${b.css}; box-sizing:border-box; margin:0; display:block;">${b.html}</div>`;
+                htmlTable += `<div class="fluid-text" style="${b.css}; --fs:${b.fsVal}; --lh:${b.lhVal}; --pt:${b.ptVal}; --px:${b.pxVal}; box-sizing:border-box; margin:0; display:block;">${b.html}</div>`;
              } else if (b.type === 'spacer') {
-                htmlTable += `<div style="width:100%; height:${b.h}px; font-size:1px; line-height:1px; background-color:transparent;">&nbsp;</div>`;
+                htmlTable += `<div class="fluid-spacer" style="width:100%; height:${b.h}px; --sh:${b.h}; font-size:1px; line-height:1px; background-color:transparent;">&nbsp;</div>`;
              }
              
-             htmlTable += `</td></tr></table>`;
              htmlTable += `</td>`;
              currentX = startX + safeW;
           }
@@ -1905,7 +1927,8 @@
         
         if (currentX < 850) { 
            let rem = 850 - currentX;
-           htmlTable += `<td width="${rem}" style="width:${rem}px; min-width:${rem}px; font-size:1px; line-height:1px; padding:0; margin:0; mso-line-height-rule:exactly;">&nbsp;</td>`; 
+           let percRem = Number((rem / 850 * 100).toFixed(4));
+           htmlTable += `<td width="${percRem}%" style="width:${percRem}%; font-size:1px; line-height:1px; padding:0; margin:0; mso-line-height-rule:exactly;">&nbsp;</td>`; 
         }
         htmlTable += `</tr></table></td></tr>`;
         currentY = row.bottom;
@@ -1941,10 +1964,24 @@ Content-Transfer-Encoding: 8bit
   <style>
     body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
     table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
-    img { -ms-interpolation-mode: bicubic; }
-    img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; display: block; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; display: block; }
     table { border-collapse: collapse !important; }
     body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #ffffff; }
+    
+    /* MOTOR RESPONSIVE: Escala perfectamente toda la estructura, imágenes y fuentes en base a 850px */
+    @media only screen and (max-width: 850px) {
+        .fluid-text {
+            font-size: calc(var(--fs) * 100vw / 850) !important;
+            line-height: calc(var(--lh) * 100vw / 850) !important;
+            padding-top: calc(var(--pt) * 100vw / 850) !important;
+            padding-left: calc(var(--px) * 100vw / 850) !important;
+            padding-right: calc(var(--px) * 100vw / 850) !important;
+        }
+        .fluid-spacer { height: calc(var(--sh) * 100vw / 850) !important; }
+        .fluid-gap { height: calc(var(--gh) * 100vw / 850) !important; }
+        .fluid-y-offset { padding-top: calc(var(--yo) * 100vw / 850) !important; }
+        .resp-img { width: 100% !important; max-width: 100% !important; height: auto !important; }
+    }
   </style>
 </head>
 <body style="margin:0; padding:0; background-color:#ffffff;">

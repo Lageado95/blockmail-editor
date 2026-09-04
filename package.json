@@ -1,6 +1,6 @@
 {
   "name": "blockmail-editor",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "Creador visual de Newsletters exportables a EML",
   "main": "index.js",
   "author": "Juan Tiago Márquez",
