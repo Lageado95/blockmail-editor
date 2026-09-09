@@ -13,7 +13,9 @@ function createWindow () {
     icon: path.join(__dirname, 'app-logo.ico'),
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
+      sandbox: false,
+      webSecurity: false
     }
   });
   mainWindow.loadFile('index.html');
@@ -21,7 +23,15 @@ function createWindow () {
   mainWindow.on('close', (e) => {
     if (!isForceClose) {
       e.preventDefault();
+      // Le pedimos a la interfaz que confirme si hay cambios sin guardar
       mainWindow.webContents.send('request-app-close');
+      
+      // SEGURO ANTI-CUELGUES: Si la interfaz gráfica crashea y no responde, 
+      // forzamos el cierre a los 2 segundos para que el programa no quede trabado.
+      setTimeout(() => {
+        isForceClose = true;
+        app.quit();
+      }, 2000);
     }
   });
 
@@ -48,8 +58,6 @@ app.whenReady().then(() => {
 ipcMain.handle('show-save-dialog', async (event, options) => { return await dialog.showSaveDialog(mainWindow, options); });
 ipcMain.handle('show-open-dialog', async (event, options) => { return await dialog.showOpenDialog(mainWindow, options); });
 ipcMain.handle('get-user-data-path', () => { return app.getPath('userData'); });
-
-// Enviar la versión de la app al frontend
 ipcMain.handle('get-app-version', () => { return app.getVersion(); });
 
 ipcMain.handle('read-file', (event, filePath) => {

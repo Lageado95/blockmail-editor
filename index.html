@@ -332,7 +332,7 @@
     /* BLOQUES DEL LIENZO */
     .block { 
       position: absolute; 
-      background-color: #ffffff; /* FIX: Forzar siempre fondo blanco en el editor */
+      background-color: #ffffff;
       box-sizing: border-box; 
       min-width: 20px; 
       min-height: 10px; 
@@ -367,7 +367,7 @@
       pointer-events: none; 
       overflow: hidden; 
       user-select: none; 
-      background-color: #ffffff; /* Respaldo para el contenido visual */
+      background-color: #ffffff;
     }
     
     .bg-image { background-color: #e0e0e0; } 
@@ -382,7 +382,7 @@
       overflow: hidden; 
       pointer-events: none; 
       user-select: none; 
-      background-color: #ffffff; /* FIX: Evita que el modo oscuro traspase los textos */
+      background-color: #ffffff;
     }
     
     .block-text.editing { 
@@ -580,6 +580,7 @@
 
   <div id="welcome-screen">
     <div class="ws-sidebar">
+      <!-- ÍCONO DE LA APP EN EL INICIO -->
       <h1><img src="app-logo.ico" style="width: 32px; height: 32px; object-fit: contain;" alt="" onerror="this.style.display='none'"> BlockMail <small id="ws-app-version" style="font-size: 12px; color: #888; font-weight: normal;"></small></h1>
       <button class="ws-btn-primary" onclick="newProject()">Archivo nuevo</button>
       <button class="ws-btn-secondary" onclick="triggerLoadProject()">Abrir</button>
@@ -783,22 +784,7 @@
     // ==========================================
     // LÓGICA DE SISTEMA (ELECTRON E IPC)
     // ==========================================
-    let fs, path;
-    try { 
-      fs = require('fs'); 
-      path = require('path'); 
-    } catch(e) {}
-
-    let ipcRenderer = null;
-    try { 
-      ipcRenderer = require('electron').ipcRenderer; 
-    } catch (e) { 
-      console.log("Modo Web"); 
-    }
-    
-    let userDataPath = '';
-    
-    // SAFE JSON PARSE: Evita que la app crashee en el inicio si hay basura guardada en localStorage
+    // SAFE JSON PARSE: Se declara primero para evitar bloqueos
     function safeJSONParse(key, fallback) {
       try {
         let item = localStorage.getItem(key);
@@ -806,10 +792,22 @@
         let parsed = JSON.parse(item);
         return parsed !== null ? parsed : fallback;
       } catch (e) {
-        console.error("Error leyendo caché para " + key + ":", e);
         return fallback;
       }
     }
+
+    let fs, path, ipcRenderer;
+    
+    // Carga de módulos limpia sin chequeos que rompan el entorno nativo de Electron
+    try { 
+      fs = require('fs'); 
+      path = require('path'); 
+      ipcRenderer = require('electron').ipcRenderer; 
+    } catch(e) { 
+      console.warn("Modo Web - Módulos de sistema bloqueados o no disponibles."); 
+    }
+    
+    let userDataPath = '';
 
     if (ipcRenderer && fs && path) {
       ipcRenderer.invoke('get-app-version').then(version => {
@@ -839,12 +837,16 @@
       });
 
       ipcRenderer.on('request-app-close', () => {
-         if (projects.some(p => p.unsaved)) {
-             document.getElementById('close-tab-modal').style.display = 'flex';
-             document.querySelector('#close-tab-modal .modal-title').innerText = "Cerrar BlockMail";
-             document.querySelector('#close-tab-modal .modal-text').innerText = "Tenés proyectos con cambios sin guardar. ¿Querés guardar todo antes de salir?";
-             isAppClosing = true;
-         } else {
+         try {
+             if (projects.some(p => p.unsaved)) {
+                 document.getElementById('close-tab-modal').style.display = 'flex';
+                 document.querySelector('#close-tab-modal .modal-title').innerText = "Cerrar BlockMail";
+                 document.querySelector('#close-tab-modal .modal-text').innerText = "Tenés proyectos con cambios sin guardar. ¿Querés guardar todo antes de salir?";
+                 isAppClosing = true;
+             } else {
+                 ipcRenderer.send('force-close-app');
+             }
+         } catch(err) {
              ipcRenderer.send('force-close-app');
          }
       });
@@ -991,7 +993,7 @@
       }
       let loadedProj = {
           id: Date.now().toString(),
-          name: path ? path.basename(filePath, '.bmail') : filePath,
+          name: typeof path !== 'undefined' ? path.basename(filePath, '.bmail') : filePath,
           filePath: filePath,
           subject: data.subject || '',
           blocks: data.blocks || [],
@@ -1083,20 +1085,25 @@
         const img = new Image(); 
         img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
         img.onload = () => {
-            const cvs = document.createElement('canvas'); 
-            cvs.width = width / 4; 
-            cvs.height = height / 4;
-            const ctx = cvs.getContext('2d'); 
-            ctx.fillStyle = '#ffffff'; 
-            ctx.fillRect(0, 0, cvs.width, cvs.height);
-            ctx.drawImage(img, 0, 0, cvs.width, cvs.height); 
-            callback(cvs.toDataURL('image/png'));
+            try {
+                const cvs = document.createElement('canvas'); 
+                cvs.width = width / 4; 
+                cvs.height = height / 4;
+                const ctx = cvs.getContext('2d'); 
+                ctx.fillStyle = '#ffffff'; 
+                ctx.fillRect(0, 0, cvs.width, cvs.height);
+                ctx.drawImage(img, 0, 0, cvs.width, cvs.height); 
+                callback(cvs.toDataURL('image/png'));
+            } catch(e) {
+                callback('');
+            }
         };
         img.onerror = () => { callback(''); };
     }
 
     function renderRecents() {
       let recents = safeJSONParse('bmail_recents', []);
+      if (!Array.isArray(recents)) recents = [];
       let grid = document.getElementById('recent-projects-grid');
       if(!grid) return; 
       grid.innerHTML = '';
@@ -1106,9 +1113,10 @@
          let card = document.createElement('div'); 
          card.className = 'recent-card';
          
+         // ÍCONO DE BMAIL POR DEFECTO EN RECIENTES
          let thumbHtml = '<div style="font-size:40px; color:#444; display:flex; align-items:center; justify-content:center; height:100%;"><img src="doc-logo.ico" style="width:48px; height:48px; opacity:0.3; object-fit:contain;" alt="📄"></div>';
          if (r.thumbPath) { 
-             thumbHtml = `<img src="file:///${r.thumbPath.replace(/\\/g, '/')}?t=${Date.now()}" style="width:100%; height:100%; object-fit:contain; object-position:top; background:#fff; padding:5px; box-sizing:border-box;">`; 
+             thumbHtml = `<img src="file:///${r.thumbPath.replace(/\\/g, '/')}?t=${Date.now()}" style="width:100%; height:100%; object-fit:contain; object-position:top; background:#fff; padding:5px; box-sizing:border-box;" onerror="this.src='doc-logo.ico'; this.style.opacity='0.3';">`; 
          }
          
          card.innerHTML = `
@@ -1119,7 +1127,7 @@
             </div>
          `;
          card.onclick = () => {
-            if(r.filePath && fs && fs.existsSync(r.filePath)) {
+            if(r.filePath && typeof fs !== 'undefined' && fs.existsSync(r.filePath)) {
                const content = fs.readFileSync(r.filePath, 'utf-8');
                loadProjectIntoTab(r.filePath, JSON.parse(content));
             } else {
@@ -1167,7 +1175,7 @@
           finalPath = result.filePath;
       }
       
-      const fileName = path.basename(finalPath, '.bmail'); 
+      const fileName = typeof path !== 'undefined' ? path.basename(finalPath, '.bmail') : 'Proyecto'; 
       await ipcRenderer.invoke('save-file', finalPath, JSON.stringify(projectData));
 
       p.name = fileName; 
@@ -1177,13 +1185,14 @@
 
       takeScreenshot(p.id, (base64Img) => {
           let recents = safeJSONParse('bmail_recents', []);
+          if (!Array.isArray(recents)) recents = [];
           recents = recents.filter(r => r.filePath !== finalPath && r.id !== p.id); 
           
           let thumbPath = '';
-          if (base64Img && userDataPath) {
+          if (base64Img && userDataPath && typeof fs !== 'undefined' && fs && path) {
               thumbPath = path.join(userDataPath, 'thumbnails', p.id + '.png');
               const base64Data = base64Img.replace(/^data:image\/png;base64,/, "");
-              fs.writeFileSync(thumbPath, base64Data, 'base64');
+              try { fs.writeFileSync(thumbPath, base64Data, 'base64'); } catch(e) { thumbPath = ''; }
           }
           
           recents.unshift({ 
@@ -1200,6 +1209,22 @@
           renderRecents();
       });
       return true;
+    }
+
+    function handleProjectUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          loadProjectIntoTab(file.name, data);
+        } catch (err) {
+          alert("El archivo no es válido.");
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
     }
 
     async function triggerLoadProject() { 
@@ -1454,6 +1479,7 @@
     let asePalettes = safeJSONParse('bmail_ase_palettes', []);
 
     function renderPalette() {
+      if(!Array.isArray(customPalette)) customPalette = [];
       const container = document.getElementById('palette-container');
       container.innerHTML = '';
       customPalette.forEach((c, index) => {
@@ -1462,6 +1488,7 @@
         div.oncontextmenu = function(e) { e.preventDefault(); }; container.appendChild(div);
       });
 
+      if(!Array.isArray(asePalettes)) asePalettes = [];
       const aseContainer = document.getElementById('ase-palettes-container');
       aseContainer.innerHTML = '';
       asePalettes.forEach((pal, pIndex) => {
@@ -1547,14 +1574,12 @@
          }
       }
 
-      // Si es color y NO hay texto específico seleccionado, aplicarlo a todo el bloque
       if (command === 'foreColor' && !textIsSelected && selectedBlocks.size > 0) {
           selectedBlocks.forEach(block => {
               if (block.dataset.type === 'text') {
                   let textEl = block.querySelector('.block-text');
                   if (textEl) {
                       textEl.style.color = value;
-                      // Remover colores aplicados parcialmente para que todo herede el color principal
                       textEl.querySelectorAll('*').forEach(child => {
                           if (child.style.color) child.style.color = '';
                       });
@@ -1710,7 +1735,6 @@
     function addBlock(type, restoreData = null) {
       const block = document.createElement('div'); block.className = 'block'; block.dataset.type = type; let minH = type === 'spacer' ? 10 : 20;
       
-      // FORZAR FONDO BLANCO EN EL BLOQUE
       block.style.backgroundColor = '#ffffff';
 
       if (restoreData) { 
@@ -1736,12 +1760,11 @@
           if (!restoreData) block.style.height = '100px'; 
           const content = document.createElement('div'); content.className = 'block-text'; 
           
-          // FORZAR FONDO BLANCO EN EL TEXTO
           content.style.backgroundColor = '#ffffff';
 
           if (restoreData) { 
               content.style.cssText = restoreData.css; 
-              content.style.backgroundColor = '#ffffff'; // Re-forzar por si el css lo sobreescribió
+              content.style.backgroundColor = '#ffffff'; 
               content.innerHTML = restoreData.html; 
           } else { 
               content.style.fontFamily = 'Arial, sans-serif'; 
@@ -1935,7 +1958,6 @@
 
       let currentY = 0;
       rows.forEach(row => {
-        // GAPS ENTRE FILAS
         if (row.top > currentY) { 
            let gap = row.top - currentY; 
            let percGap = Number((gap / 850 * 100).toFixed(4));
@@ -1979,7 +2001,6 @@
              
              htmlTable += `<td width="${percW}%" valign="${vAlignHtml}" bgcolor="#ffffff" class="responsive-td force-white" style="width:${percW}%; padding:0; margin:0; background-color:#ffffff;">`;
              
-             // OFFSET Y
              if (yOffset > 0) {
                  let yOffsetPerc = Number((yOffset / safeW * 100).toFixed(4));
                  htmlTable += `
@@ -2170,5 +2191,26 @@ Content-Transfer-Encoding: 8bit
   <div class="force-white" style="background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); width:100%;">
     ${htmlTable}
   </div>
+</body>
+</html>
+
+`;
+      
+      attachments.forEach(att => { eml += `--${boundary}
+Content-Type: ${att.mimeType}; name="${att.cid}.${att.ext}"
+Content-Transfer-Encoding: base64
+Content-ID: <${att.cid}>
+Content-Disposition: inline; filename="${att.cid}.${att.ext}"
+
+${att.base64Data}
+
+`; });
+      eml += `--${boundary}--
+`;
+      
+      const blob = new Blob([eml], { type: 'message/rfc822' }); const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'Newsletter.eml'; a.click(); URL.revokeObjectURL(url);
+    }
+  </script>
 </body>
 </html>
