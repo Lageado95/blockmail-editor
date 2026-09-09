@@ -580,7 +580,7 @@
 
   <div id="welcome-screen">
     <div class="ws-sidebar">
-      <h1><img src="doc-logo.ico" style="width: 32px; height: 32px; object-fit: contain;" alt="" onerror="this.style.display='none'"> BlockMail <small id="ws-app-version" style="font-size: 12px; color: #888; font-weight: normal;"></small></h1>
+      <h1><img src="app-logo.ico" style="width: 32px; height: 32px; object-fit: contain;" alt="" onerror="this.style.display='none'"> BlockMail <small id="ws-app-version" style="font-size: 12px; color: #888; font-weight: normal;"></small></h1>
       <button class="ws-btn-primary" onclick="newProject()">Archivo nuevo</button>
       <button class="ws-btn-secondary" onclick="triggerLoadProject()">Abrir</button>
     </div>
@@ -739,7 +739,7 @@
               </div>
             </div>
             
-            <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px; margin-top:15px;">Solo Selección (Texto resaltado)</label>
+            <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px; margin-top:15px;">Selección o Cuadro</label>
             <div class="align-group" style="margin-bottom: 8px;">
               <button class="tool-btn align-btn" onmousedown="event.preventDefault(); inlineFormat('bold')" title="Negrita"><b>B</b></button>
               <button class="tool-btn align-btn" onmousedown="event.preventDefault(); inlineFormat('italic')" title="Cursiva"><i>I</i></button>
@@ -798,6 +798,19 @@
     
     let userDataPath = '';
     
+    // SAFE JSON PARSE: Evita que la app crashee en el inicio si hay basura guardada en localStorage
+    function safeJSONParse(key, fallback) {
+      try {
+        let item = localStorage.getItem(key);
+        if (item === null || item === 'undefined' || item === '') return fallback;
+        let parsed = JSON.parse(item);
+        return parsed !== null ? parsed : fallback;
+      } catch (e) {
+        console.error("Error leyendo caché para " + key + ":", e);
+        return fallback;
+      }
+    }
+
     if (ipcRenderer && fs && path) {
       ipcRenderer.invoke('get-app-version').then(version => {
          const vStr = "v" + version;
@@ -805,7 +818,7 @@
          const wsAppVersion = document.getElementById('ws-app-version');
          if(topAppVersion) topAppVersion.innerText = vStr;
          if(wsAppVersion) wsAppVersion.innerText = vStr;
-      });
+      }).catch(e => console.log(e));
 
       ipcRenderer.invoke('get-user-data-path').then(p => {
          userDataPath = p;
@@ -813,7 +826,7 @@
          if (!fs.existsSync(thumbsDir)) {
            fs.mkdirSync(thumbsDir, { recursive: true });
          }
-      });
+      }).catch(e => console.log(e));
       
       ipcRenderer.on('open-external-file', (event, filePath) => {
          try {
@@ -1083,7 +1096,7 @@
     }
 
     function renderRecents() {
-      let recents = JSON.parse(localStorage.getItem('bmail_recents')) || [];
+      let recents = safeJSONParse('bmail_recents', []);
       let grid = document.getElementById('recent-projects-grid');
       if(!grid) return; 
       grid.innerHTML = '';
@@ -1093,7 +1106,7 @@
          let card = document.createElement('div'); 
          card.className = 'recent-card';
          
-         let thumbHtml = '<div style="font-size:40px; color:#444;">📄</div>';
+         let thumbHtml = '<div style="font-size:40px; color:#444; display:flex; align-items:center; justify-content:center; height:100%;"><img src="doc-logo.ico" style="width:48px; height:48px; opacity:0.3; object-fit:contain;" alt="📄"></div>';
          if (r.thumbPath) { 
              thumbHtml = `<img src="file:///${r.thumbPath.replace(/\\/g, '/')}?t=${Date.now()}" style="width:100%; height:100%; object-fit:contain; object-position:top; background:#fff; padding:5px; box-sizing:border-box;">`; 
          }
@@ -1163,7 +1176,7 @@
       renderTabs();
 
       takeScreenshot(p.id, (base64Img) => {
-          let recents = JSON.parse(localStorage.getItem('bmail_recents')) || [];
+          let recents = safeJSONParse('bmail_recents', []);
           recents = recents.filter(r => r.filePath !== finalPath && r.id !== p.id); 
           
           let thumbPath = '';
@@ -1437,8 +1450,8 @@
     }
 
     // PALETA DE COLORES Y ASE
-    let customPalette = JSON.parse(localStorage.getItem('bmail_palette')) || ['#000000', '#ffffff', '#808080', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6'];
-    let asePalettes = JSON.parse(localStorage.getItem('bmail_ase_palettes')) || [];
+    let customPalette = safeJSONParse('bmail_palette', ['#000000', '#ffffff', '#808080', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6']);
+    let asePalettes = safeJSONParse('bmail_ase_palettes', []);
 
     function renderPalette() {
       const container = document.getElementById('palette-container');
@@ -1521,13 +1534,37 @@
 
     function inlineFormat(command, value = null) {
       const active = document.activeElement;
-      if (!active || !active.classList.contains('editing')) {
-         if (savedRange && selectedBlocks.size === 1) {
-            let block = Array.from(selectedBlocks)[0]; let textEl = block.querySelector('.block-text');
-            if (textEl && textEl.contains(savedRange.commonAncestorContainer)) { const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(savedRange); }
+      let textIsSelected = false;
+      const sel = window.getSelection();
+
+      if (active && active.classList.contains('editing')) {
+         if (sel.toString().length > 0) textIsSelected = true;
+      } else if (savedRange && selectedBlocks.size === 1) {
+         let block = Array.from(selectedBlocks)[0]; let textEl = block.querySelector('.block-text');
+         if (textEl && textEl.contains(savedRange.commonAncestorContainer)) { 
+             sel.removeAllRanges(); sel.addRange(savedRange);
+             if (sel.toString().length > 0) textIsSelected = true;
          }
       }
-      document.execCommand(command, false, value);
+
+      // Si es color y NO hay texto específico seleccionado, aplicarlo a todo el bloque
+      if (command === 'foreColor' && !textIsSelected && selectedBlocks.size > 0) {
+          selectedBlocks.forEach(block => {
+              if (block.dataset.type === 'text') {
+                  let textEl = block.querySelector('.block-text');
+                  if (textEl) {
+                      textEl.style.color = value;
+                      // Remover colores aplicados parcialmente para que todo herede el color principal
+                      textEl.querySelectorAll('*').forEach(child => {
+                          if (child.style.color) child.style.color = '';
+                      });
+                  }
+              }
+          });
+      } else {
+          document.execCommand(command, false, value);
+      }
+
       if (value !== null && document.getElementById('inline-color')) document.getElementById('inline-color').value = value;
       saveState();
     }
@@ -1672,6 +1709,10 @@
 
     function addBlock(type, restoreData = null) {
       const block = document.createElement('div'); block.className = 'block'; block.dataset.type = type; let minH = type === 'spacer' ? 10 : 20;
+      
+      // FORZAR FONDO BLANCO EN EL BLOQUE
+      block.style.backgroundColor = '#ffffff';
+
       if (restoreData) { 
           block.style.left = restoreData.x || '0px'; 
           block.style.top = restoreData.y || getLowestPoint() + 'px'; 
@@ -1694,7 +1735,29 @@
       } else if (type === 'text') { 
           if (!restoreData) block.style.height = '100px'; 
           const content = document.createElement('div'); content.className = 'block-text'; 
-          if (restoreData) { content.style.cssText = restoreData.css; content.innerHTML = restoreData.html; } else { content.style.fontFamily = 'Arial, sans-serif'; content.style.fontSize = '14px'; content.style.lineHeight = '20px'; content.style.color = '#000000'; content.style.textAlign = 'left'; content.style.display = 'flex'; content.style.flexDirection = 'column'; content.style.justifyContent = 'flex-start'; content.style.paddingTop = '10px'; content.style.paddingBottom = '10px'; content.style.paddingLeft = '15px'; content.style.paddingRight = '15px'; content.innerHTML = '<div style="text-align:center;"><img src="icon-text.png" style="width:35px; opacity:0.25; filter: invert(1); pointer-events:none; user-select:none;"></div>'; } 
+          
+          // FORZAR FONDO BLANCO EN EL TEXTO
+          content.style.backgroundColor = '#ffffff';
+
+          if (restoreData) { 
+              content.style.cssText = restoreData.css; 
+              content.style.backgroundColor = '#ffffff'; // Re-forzar por si el css lo sobreescribió
+              content.innerHTML = restoreData.html; 
+          } else { 
+              content.style.fontFamily = 'Arial, sans-serif'; 
+              content.style.fontSize = '14px'; 
+              content.style.lineHeight = '20px'; 
+              content.style.color = '#000000'; 
+              content.style.textAlign = 'left'; 
+              content.style.display = 'flex'; 
+              content.style.flexDirection = 'column'; 
+              content.style.justifyContent = 'flex-start'; 
+              content.style.paddingTop = '10px'; 
+              content.style.paddingBottom = '10px'; 
+              content.style.paddingLeft = '15px'; 
+              content.style.paddingRight = '15px'; 
+              content.innerHTML = '<div style="text-align:center;"><img src="icon-text.png" style="width:35px; opacity:0.25; filter: invert(1); pointer-events:none; user-select:none;"></div>'; 
+          } 
           block.addEventListener('dblclick', function(e) { if (selectedBlocks.size === 1) { content.contentEditable = true; content.classList.add('editing'); if (content.innerHTML.includes('icon-text.png')) content.innerHTML = ''; content.focus(); } }); 
           content.addEventListener('blur', function() { content.contentEditable = false; content.classList.remove('editing'); if (content.innerHTML.trim() === '' || content.innerHTML === '<br>') { content.innerHTML = '<div style="text-align:center;"><img src="icon-text.png" style="width:35px; opacity:0.25; filter: invert(1); pointer-events:none; user-select:none;"></div>'; } saveState(); }); 
           block.appendChild(content); 
@@ -2107,26 +2170,5 @@ Content-Transfer-Encoding: 8bit
   <div class="force-white" style="background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); width:100%;">
     ${htmlTable}
   </div>
-</body>
-</html>
-
-`;
-      
-      attachments.forEach(att => { eml += `--${boundary}
-Content-Type: ${att.mimeType}; name="${att.cid}.${att.ext}"
-Content-Transfer-Encoding: base64
-Content-ID: <${att.cid}>
-Content-Disposition: inline; filename="${att.cid}.${att.ext}"
-
-${att.base64Data}
-
-`; });
-      eml += `--${boundary}--
-`;
-      
-      const blob = new Blob([eml], { type: 'message/rfc822' }); const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'Newsletter.eml'; a.click(); URL.revokeObjectURL(url);
-    }
-  </script>
 </body>
 </html>

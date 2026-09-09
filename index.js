@@ -10,7 +10,7 @@ function createWindow () {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    icon: path.join(__dirname, 'doc-logo.ico'),
+    icon: path.join(__dirname, 'app-logo.ico'),
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -49,7 +49,7 @@ ipcMain.handle('show-save-dialog', async (event, options) => { return await dial
 ipcMain.handle('show-open-dialog', async (event, options) => { return await dialog.showOpenDialog(mainWindow, options); });
 ipcMain.handle('get-user-data-path', () => { return app.getPath('userData'); });
 
-// NUEVO: Enviar la versión de la app al frontend
+// Enviar la versión de la app al frontend
 ipcMain.handle('get-app-version', () => { return app.getVersion(); });
 
 ipcMain.handle('read-file', (event, filePath) => {
