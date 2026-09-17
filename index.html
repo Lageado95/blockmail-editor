@@ -1113,7 +1113,6 @@
          let card = document.createElement('div'); 
          card.className = 'recent-card';
          
-         // ÍCONO DE BMAIL POR DEFECTO EN RECIENTES
          let thumbHtml = '<div style="font-size:40px; color:#444; display:flex; align-items:center; justify-content:center; height:100%;"><img src="doc-logo.ico" style="width:48px; height:48px; opacity:0.3; object-fit:contain;" alt="📄"></div>';
          if (r.thumbPath) { 
              thumbHtml = `<img src="file:///${r.thumbPath.replace(/\\/g, '/')}?t=${Date.now()}" style="width:100%; height:100%; object-fit:contain; object-position:top; background:#fff; padding:5px; box-sizing:border-box;" onerror="this.src='doc-logo.ico'; this.style.opacity='0.3';">`; 
@@ -1345,6 +1344,7 @@
         propW.value = block.offsetWidth; 
         propH.value = block.offsetHeight; 
         const type = block.dataset.type; 
+        
         if (type === 'image' || type === 'gif') { 
           document.getElementById('media-properties').style.display = 'block'; 
           document.getElementById('text-props').style.display = 'none'; 
@@ -1356,15 +1356,14 @@
           document.getElementById('media-properties').style.display = 'none'; 
           document.getElementById('text-props').style.display = 'block'; 
           
-          // NUEVO: Cargar los valores actuales del bloque de texto en el panel
           let tEl = block.querySelector('.block-text');
           if (tEl) {
-              let currentFont = tEl.style.fontFamily || 'Arial, sans-serif';
+              let compStyle = window.getComputedStyle(tEl);
+              let currentFont = tEl.style.fontFamily || compStyle.fontFamily || 'Arial';
               let fontSelect = document.getElementById('prop-font-family');
               let foundMatch = false;
               for (let i = 0; i < fontSelect.options.length; i++) {
-                  // Limpiar comillas para comparar correctamente (ej: "'Segoe UI'" vs "Segoe UI")
-                  if (currentFont.toLowerCase().includes(fontSelect.options[i].value.split(',')[0].replace(/['"]/g, '').toLowerCase())) {
+                  if (currentFont.toLowerCase().replace(/['"]/g, '').includes(fontSelect.options[i].value.split(',')[0].replace(/['"]/g, '').toLowerCase())) {
                       fontSelect.selectedIndex = i;
                       foundMatch = true;
                       break;
@@ -1372,10 +1371,10 @@
               }
               if (!foundMatch) fontSelect.value = "Arial, sans-serif";
 
-              document.getElementById('prop-font-size').value = parseInt(tEl.style.fontSize) || 14;
-              document.getElementById('prop-line-height').value = parseInt(tEl.style.lineHeight) || 20;
-              document.getElementById('prop-padding-top').value = parseInt(tEl.style.paddingTop) || 10;
-              document.getElementById('prop-padding-sides').value = parseInt(tEl.style.paddingLeft) || 15;
+              document.getElementById('prop-font-size').value = parseInt(tEl.style.fontSize || compStyle.fontSize) || 14;
+              document.getElementById('prop-line-height').value = parseInt(tEl.style.lineHeight || compStyle.lineHeight) || 20;
+              document.getElementById('prop-padding-top').value = parseInt(tEl.style.paddingTop || compStyle.paddingTop) || 10;
+              document.getElementById('prop-padding-sides').value = parseInt(tEl.style.paddingLeft || compStyle.paddingLeft) || 15;
           }
 
         } else if (type === 'spacer') { 
@@ -1812,6 +1811,7 @@
               e.preventDefault();
               let text = (e.clipboardData || window.clipboardData).getData('text/plain');
               document.execCommand('insertText', false, text);
+              saveState();
           });
 
           block.appendChild(content); 
@@ -1940,11 +1940,16 @@
         }
         
         let fsVal = 14, lhVal = 20, ptVal = 10, pxVal = 15;
+        let ffVal = 'Arial, sans-serif'; 
         if (tEl) {
             fsVal = parseInt(tEl.style.fontSize) || 14;
             lhVal = parseInt(tEl.style.lineHeight) || Math.round(fsVal * 1.2) || 20;
             ptVal = parseInt(tEl.style.paddingTop) || 0;
             pxVal = parseInt(tEl.style.paddingLeft) || 0;
+            
+            // Extraer tipografía real del DOM
+            let compStyle = window.getComputedStyle(tEl);
+            ffVal = tEl.style.fontFamily || compStyle.fontFamily || 'Arial, sans-serif';
         }
 
         return { 
@@ -1957,7 +1962,7 @@
             href: b.dataset.href || '', 
             html: htmlContent, 
             css: tEl ? tEl.style.cssText : '',
-            fsVal, lhVal, ptVal, pxVal 
+            fsVal, lhVal, ptVal, pxVal, ffVal 
         };
       });
 
@@ -2076,7 +2081,9 @@
                  let pxVW = (b.pxVal / 850 * 100).toFixed(4);
                  cssRules.add(`.${textClass} { font-size: ${fsVW}vw !important; line-height: ${lhVW}vw !important; padding-top: ${ptVW}vw !important; padding-left: ${pxVW}vw !important; padding-right: ${pxVW}vw !important; }`);
                  
-                 htmlTable += `<div class="${textClass} text-content force-white" style="${b.css}; font-size:${b.fsVal}px; line-height:${b.lhVal}px; padding-top:${b.ptVal}px; padding-left:${b.pxVal}px; padding-right:${b.pxVal}px; box-sizing:border-box; margin:0; display:block; background-color:#ffffff;">${b.html}</div>`;
+                 // Inyectamos font-family limpio y mso-line-height-rule:exactly
+                 let safeFontFamily = b.ffVal.replace(/"/g, "'");
+                 htmlTable += `<div class="${textClass} text-content force-white" style="${b.css}; font-family: ${safeFontFamily}; font-size:${b.fsVal}px; line-height:${b.lhVal}px; padding-top:${b.ptVal}px; padding-left:${b.pxVal}px; padding-right:${b.pxVal}px; box-sizing:border-box; margin:0; display:block; background-color:#ffffff; mso-line-height-rule:exactly;">${b.html}</div>`;
              } else if (b.type === 'spacer') {
                  let spacerPerc = Number((b.h / safeW * 100).toFixed(4));
                  htmlTable += `
@@ -2218,7 +2225,7 @@ Content-Transfer-Encoding: 8bit
     }
   </style>
 </head>
-<body class="body force-white" bgcolor="#ffffff" style="margin:0; padding:0; background-color:#ffffff;">
+<body class="body force-white" bgcolor="#ffffff" style="margin:0; padding:0; background-color:#ffffff; font-family: Arial, Helvetica, sans-serif;">
   <div class="force-white" style="background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); width:100%;">
     ${htmlTable}
   </div>
