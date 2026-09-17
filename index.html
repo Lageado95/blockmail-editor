@@ -712,14 +712,9 @@
           </div>
           
           <div id="text-props">
-            <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px;">Todo el Cuadro</label>
-            <select id="prop-font-family" class="media-input" style="margin-top:0;" onchange="updateTextProperties()">
-              <option value="Arial, sans-serif">Arial</option>
-              <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
-              <option value="'Times New Roman', Times, serif">Times New Roman</option>
-              <option value="Georgia, serif">Georgia</option>
-              <option value="'Courier New', Courier, monospace">Courier New</option>
-              <option value="Verdana, sans-serif">Verdana</option>
+            <label style="font-size: 12px; color: #aaa; display:block; margin-bottom:5px;">Todo el Cuadro (Forzado a Arial)</label>
+            <select id="prop-font-family" class="media-input" style="margin-top:0;" onchange="updateTextProperties()" disabled>
+              <option value="Arial, sans-serif" selected>Arial</option>
             </select>
 
             <div style="display:flex; justify-content:space-between; margin-top:10px;">
@@ -1365,18 +1360,6 @@
           let tEl = block.querySelector('.block-text');
           if (tEl) {
               let compStyle = window.getComputedStyle(tEl);
-              let currentFont = tEl.style.fontFamily || compStyle.fontFamily || 'Arial';
-              let fontSelect = document.getElementById('prop-font-family');
-              let foundMatch = false;
-              for (let i = 0; i < fontSelect.options.length; i++) {
-                  if (currentFont.toLowerCase().replace(/['"]/g, '').includes(fontSelect.options[i].value.split(',')[0].replace(/['"]/g, '').toLowerCase())) {
-                      fontSelect.selectedIndex = i;
-                      foundMatch = true;
-                      break;
-                  }
-              }
-              if (!foundMatch) fontSelect.value = "Arial, sans-serif";
-
               document.getElementById('prop-font-size').value = parseInt(tEl.style.fontSize || compStyle.fontSize) || 14;
               document.getElementById('prop-line-height').value = parseInt(tEl.style.lineHeight || compStyle.lineHeight) || 20;
               document.getElementById('prop-padding-top').value = parseInt(tEl.style.paddingTop || compStyle.paddingTop) || 10;
@@ -1482,7 +1465,6 @@
       tEl.style.paddingLeft = document.getElementById('prop-padding-sides').value + 'px'; 
       tEl.style.paddingRight = document.getElementById('prop-padding-sides').value + 'px'; 
       
-      // FORZAR A TODOS LOS HIJOS A HEREDAR PARA MATAR ESTILOS BASURA AL INSTANTE
       tEl.querySelectorAll('*').forEach(child => {
           child.style.fontFamily = 'inherit';
           child.style.fontSize = 'inherit';
@@ -1827,7 +1809,6 @@
           block.addEventListener('dblclick', function(e) { if (selectedBlocks.size === 1) { content.contentEditable = true; content.classList.add('editing'); if (content.innerHTML.includes('icon-text.png')) content.innerHTML = ''; content.focus(); } }); 
           content.addEventListener('blur', function() { content.contentEditable = false; content.classList.remove('editing'); if (content.innerHTML.trim() === '' || content.innerHTML === '<br>') { content.innerHTML = '<div style="text-align:center;"><img src="icon-text.png" style="width:35px; opacity:0.25; filter: invert(1); pointer-events:none; user-select:none;"></div>'; } saveState(); }); 
 
-          // EVENTO DE PEGADO (Limpiar formato como el Bloc de Notas)
           content.addEventListener('paste', function(e) {
               e.preventDefault();
               let text = (e.clipboardData || window.clipboardData).getData('text/plain');
@@ -1962,17 +1943,22 @@
 
         // LIMPIEZA EXTREMA: MATAR ESTILOS DE WORD/OUTLOOK DEL PAYLOAD
         if (tEl) {
-            htmlContent = htmlContent
-                .replace(/font-family\s*:[^;"'>]+;?/gi, '')
-                .replace(/font-size\s*:[^;"'>]+;?/gi, '')
-                .replace(/line-height\s*:[^;"'>]+;?/gi, '')
-                .replace(/margin[^:]*:[^;"'>]+;?/gi, '')
-                .replace(/padding[^:]*:[^;"'>]+;?/gi, '')
-                .replace(/mso-[^:]+:[^;"'>]+;?/gi, '');
+            htmlContent = htmlContent.replace(/style="([^"]*)"/g, function(match, styleRules) {
+                let cleanedRules = styleRules
+                    .replace(/font-family\s*:[^;]+;?/gi, '')
+                    .replace(/font-size\s*:[^;]+;?/gi, '')
+                    .replace(/line-height\s*:[^;]+;?/gi, '')
+                    .replace(/margin[^:]*:[^;]+;?/gi, '')
+                    .replace(/padding[^:]*:[^;]+;?/gi, '')
+                    .replace(/mso-[^:]+:[^;]+;?/gi, '');
+                return cleanedRules.trim() === '' ? '' : `style="${cleanedRules}"`;
+            });
+            htmlContent = htmlContent.replace(/<font[^>]*>/gi, '').replace(/<\/font>/gi, '');
+            htmlContent = htmlContent.replace(/class="[^"]*"/gi, '');
         }
         
         let fsVal = 14, lhVal = 20, ptVal = 10, pxVal = 15;
-        let ffVal = 'Arial, sans-serif'; 
+        let ffVal = 'Arial, Helvetica, sans-serif'; 
         let colorVal = '#666666';
         let textAlign = 'left';
 
@@ -1982,7 +1968,6 @@
             lhVal = parseInt(tEl.style.lineHeight || compStyle.lineHeight) || Math.round(fsVal * 1.2) || 20;
             ptVal = parseInt(tEl.style.paddingTop || compStyle.paddingTop) || 0;
             pxVal = parseInt(tEl.style.paddingLeft || compStyle.paddingLeft) || 0;
-            ffVal = tEl.style.fontFamily || compStyle.fontFamily || 'Arial, sans-serif';
             colorVal = tEl.style.color || compStyle.color || '#666666';
             colorVal = rgbToHex(colorVal); 
             textAlign = tEl.style.textAlign || compStyle.textAlign || 'left';
@@ -2023,20 +2008,17 @@
       let cssRules = new Set(); 
 
       let htmlTable = `
-<table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#ffffff" class="force-white" style="width:100%; background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); margin:0; padding:0; border-collapse:collapse;">
-<tr bgcolor="#ffffff">
-<td align="center" valign="top" bgcolor="#ffffff" class="force-white" style="padding: 0; margin:0; background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); border-collapse:collapse;">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#ffffff" class="force-white main-wrapper" style="width:100%; max-width:850px; background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; margin:0 auto;">`;
+<table width="850" border="0" cellpadding="0" cellspacing="0" align="center" bgcolor="#ffffff" class="force-white main-wrapper" style="width:100%; max-width:850px; background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; margin:0 auto;">`;
 
       let currentY = 0;
       rows.forEach(row => {
-        // ESPACIO ENTRE FILAS (AHORA EN PIXELES ABSOLUTOS, NADA DE PORCENTAJES PARA MATAR EL BUG DE GMAIL)
+        // ESPACIO ENTRE FILAS (AHORA EN PIXELES ABSOLUTOS)
         if (row.top > currentY) { 
            let gap = row.top - currentY; 
-           htmlTable += `<tr class="mobile-gap-row" bgcolor="#ffffff"><td bgcolor="#ffffff" height="${gap}" style="height:${gap}px; font-size:0px; line-height:0px; padding:0; margin:0; mso-line-height-rule:exactly; background-color:#ffffff; border-collapse:collapse;" class="force-white">&nbsp;</td></tr>`; 
+           htmlTable += `<tr class="mobile-gap-row" bgcolor="#ffffff"><td width="850" bgcolor="#ffffff" height="${gap}" style="height:${gap}px; font-size:0px; line-height:0px; padding:0; margin:0; mso-line-height-rule:exactly; background-color:#ffffff; border-collapse:collapse;" class="force-white">&nbsp;</td></tr>`; 
         }
         
-        htmlTable += `<tr bgcolor="#ffffff"><td bgcolor="#ffffff" style="padding:0; margin:0; background-color:#ffffff; border-collapse:collapse;" class="force-white"><table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" class="responsive-table force-white" style="width:100%; table-layout:fixed; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; background-color:#ffffff;"><tr bgcolor="#ffffff">`;
+        htmlTable += `<tr bgcolor="#ffffff"><td width="850" bgcolor="#ffffff" style="padding:0; margin:0; background-color:#ffffff; border-collapse:collapse;" class="force-white"><table width="850" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" class="responsive-table force-white" style="width:100%; max-width:850px; table-layout:fixed; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; background-color:#ffffff;"><tr bgcolor="#ffffff">`;
             
         row.blocks.sort((a, b) => a.x - b.x); 
         let currentX = 0;
@@ -2046,8 +2028,7 @@
           
           if (startX > currentX) { 
              let gap = startX - currentX; 
-             let percGap = Number((gap / 850 * 100).toFixed(4));
-             htmlTable += `<td width="${percGap}%" bgcolor="#ffffff" class="mobile-hide force-white" style="width:${percGap}%; font-size:0px; line-height:0px; padding:0; margin:0; mso-line-height-rule:exactly; background-color:#ffffff; border-collapse:collapse;"></td>`; 
+             htmlTable += `<td width="${gap}" bgcolor="#ffffff" class="mobile-hide force-white" style="width:${gap}px; font-size:0px; line-height:0px; padding:0; margin:0; mso-line-height-rule:exactly; background-color:#ffffff; border-collapse:collapse;"></td>`; 
           }
           
           let safeW = b.w - (startX - b.x);
@@ -2055,16 +2036,15 @@
           if (startX + safeW > 850) safeW = 850 - startX;
           
           if (safeW > 0) {
-             let percW = Number((safeW / 850 * 100).toFixed(4));
              let yOffset = b.y - row.top; 
              
              let vAlignHtml = 'top';
              if (b.css && b.css.includes('justify-content: center')) vAlignHtml = 'middle';
              if (b.css && b.css.includes('justify-content: flex-end')) vAlignHtml = 'bottom';
 
-             htmlTable += `<td width="${percW}%" valign="${vAlignHtml}" bgcolor="#ffffff" class="responsive-td force-white" style="width:${percW}%; padding:0; margin:0; background-color:#ffffff; border-collapse:collapse; font-size:0px; line-height:0px; mso-line-height-rule:exactly;">`;
+             // ANCHOS FIJOS PARA MATAR EL RESIZE DE OUTLOOK
+             htmlTable += `<td width="${safeW}" valign="${vAlignHtml}" bgcolor="#ffffff" class="responsive-td force-white" style="width:${safeW}px; padding:0; margin:0; background-color:#ffffff; border-collapse:collapse; font-size:0px; line-height:0px; mso-line-height-rule:exactly;">`;
              
-             // ESPACIO SUPERIOR DENTRO DE LA CELDA (PIXELES ABSOLUTOS)
              if (yOffset > 0) {
                  htmlTable += `<table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;"><tr><td height="${yOffset}" style="height:${yOffset}px; font-size:0px; line-height:0px; padding:0; margin:0; mso-line-height-rule:exactly; background-color:#ffffff;">&nbsp;</td></tr></table>`;
              }
@@ -2093,14 +2073,14 @@
                  let pxVW = (b.pxVal / 850 * 100).toFixed(4);
                  cssRules.add(`.${textClass} { font-size: ${fsVW}vw !important; line-height: ${lhVW}vw !important; padding-top: ${ptVW}vw !important; padding-left: ${pxVW}vw !important; padding-right: ${pxVW}vw !important; }`);
                  
-                 let safeFontFamily = b.ffVal.replace(/"/g, "'");
-                 
-                 // BLOQUE DE TEXTO BLINDADO PARA OUTLOOK CON TABLAS INTERNAS
+                 // ENVOLVEMOS EL CONTENIDO EN UN SPAN GLOBAL PARA FORZAR ARIAL AL MÁXIMO EN OUTLOOK
                  htmlTable += `
                  <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin:0; padding:0; border-collapse:collapse; table-layout:fixed;">
                     <tr>
-                        <td align="${b.textAlign}" class="${textClass} text-content force-white" style="font-family: ${safeFontFamily}; font-size:${b.fsVal}px; line-height:${b.lhVal}px; color:${b.colorVal}; padding-top:${b.ptVal}px; padding-left:${b.pxVal}px; padding-right:${b.pxVal}px; padding-bottom:0; mso-line-height-rule:exactly; background-color:#ffffff; word-break:break-word; text-align:${b.textAlign};">
-                            ${b.html}
+                        <td align="${b.textAlign}" class="${textClass} text-content force-white" style="font-family: Arial, Helvetica, sans-serif !important; font-size:${b.fsVal}px; line-height:${b.lhVal}px; color:${b.colorVal}; padding-top:${b.ptVal}px; padding-left:${b.pxVal}px; padding-right:${b.pxVal}px; padding-bottom:0; mso-line-height-rule:exactly; background-color:#ffffff; word-break:break-word; text-align:${b.textAlign};">
+                            <span style="font-family: Arial, Helvetica, sans-serif !important; font-size:${b.fsVal}px; color:${b.colorVal};">
+                                ${b.html}
+                            </span>
                         </td>
                     </tr>
                  </table>`;
@@ -2115,14 +2095,13 @@
         
         if (currentX < 850) { 
            let rem = 850 - currentX;
-           let percRem = Number((rem / 850 * 100).toFixed(4));
-           htmlTable += `<td width="${percRem}%" bgcolor="#ffffff" class="mobile-hide force-white" style="width:${percRem}%; font-size:0px; line-height:0px; padding:0; margin:0; mso-line-height-rule:exactly; background-color:#ffffff; border-collapse:collapse;"></td>`; 
+           htmlTable += `<td width="${rem}" bgcolor="#ffffff" class="mobile-hide force-white" style="width:${rem}px; font-size:0px; line-height:0px; padding:0; margin:0; mso-line-height-rule:exactly; background-color:#ffffff; border-collapse:collapse;"></td>`; 
         }
         htmlTable += `</tr></table></td></tr>`;
         currentY = row.bottom;
       });
 
-      htmlTable += `</table></td></tr></table>`;
+      htmlTable += `</table>`;
       const boundary = "----=_NextPart_" + Math.random().toString(16).slice(2);
       
       let eml = `To: destinatario@ejemplo.com
@@ -2144,13 +2123,21 @@ Content-Transfer-Encoding: 8bit
   <meta name="color-scheme" content="light">
   <meta name="supported-color-schemes" content="light">
   <title>${subjectStr}</title>
+  
   <!--[if mso]>
+  <style type="text/css">
+    /* BALA DE PLATA: Forzar Arial en Outlook desde la raíz */
+    body, table, td, div, p, span, a, font, b, i, u, h1, h2, h3, h4, h5, h6 { 
+        font-family: Arial, Helvetica, sans-serif !important; 
+    }
+  </style>
   <xml>
     <o:OfficeDocumentSettings>
       <o:PixelsPerInch>96</o:PixelsPerInch>
     </o:OfficeDocumentSettings>
   </xml>
   <![endif]-->
+  
   <style>
     :root {
       color-scheme: light;
@@ -2166,7 +2153,7 @@ Content-Transfer-Encoding: 8bit
     /* FORZAR HERENCIA AL CONTENIDO DE TEXTO PARA MATAR AL GHOST DE WORD */
     .text-content p, .text-content h1, .text-content h2, .text-content h3 { margin: 0 !important; padding: 0 !important; }
     .text-content * {
-        font-family: inherit !important;
+        font-family: Arial, Helvetica, sans-serif !important;
         font-size: inherit !important;
         line-height: inherit !important;
         color: inherit !important;
@@ -2250,7 +2237,13 @@ Content-Transfer-Encoding: 8bit
 </head>
 <body class="body force-white" bgcolor="#ffffff" style="margin:0; padding:0; background-color:#ffffff; font-family: Arial, Helvetica, sans-serif;">
   <div class="force-white" style="background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); width:100%;">
+    <!--[if mso]>
+    <table width="100%" border="0" cellpadding="0" cellspacing="0" align="center" bgcolor="#ffffff"><tr><td align="center" valign="top">
+    <![endif]-->
     ${htmlTable}
+    <!--[if mso]>
+    </td></tr></table>
+    <![endif]-->
   </div>
 </body>
 </html>
