@@ -398,6 +398,8 @@
       font-family: inherit !important;
       font-size: inherit !important;
       line-height: inherit !important;
+      margin: 0 !important;
+      padding: 0 !important;
     }
     
     .delete-btn { 
@@ -1918,12 +1920,15 @@
     }
     
     // ==========================================
-    // EXPORTACIÓN RESPONSIVE (INYECCIÓN DOM ESTRICTA PARA OUTLOOK)
+    // EXPORTACIÓN RESPONSIVE (INYECCIÓN DOM ESTRICTA PARA OUTLOOK Y VW PROPORCIONAL)
     // ==========================================
     function exportEML() {
       clearSelection();
       let subjectStr = subjectInput.value.trim(); if (!subjectStr) subjectStr = "Mi Nuevo Newsletter";
       
+      let cssRules = new Set(); 
+      let attachments = [];
+
       let blocks = Array.from(document.querySelectorAll('.block')).map(b => {
         let tEl = b.querySelector('.block-text');
         let htmlContent = tEl ? tEl.innerHTML : '';
@@ -1979,6 +1984,18 @@
             });
 
             htmlContent = tempDiv.innerHTML.replace(/<br\s*\/?>\s*$/i, ''); // Mata BR final (huecos en Gmail)
+            
+            // CALCULAR PORCENTAJE (VW) EN BASE A LOS 850px DE LA MESA DE TRABAJO
+            let fsVW = (fsVal / 850 * 100).toFixed(4);
+            let lhVW = (lhVal / 850 * 100).toFixed(4);
+            let ptVW = (ptVal / 850 * 100).toFixed(4);
+            let pxVW = (pxVal / 850 * 100).toFixed(4);
+            
+            let textClass = `tx-${fsVal}-${lhVal}-${ptVal}-${pxVal}`;
+            
+            // INYECTAMOS LA REGLA MATEMÁTICA PROPORCIONAL PARA TODO DISPOSITIVO MÓVIL
+            cssRules.add(`.${textClass}, .${textClass} *, .${textClass} span, .${textClass} font { font-size: ${fsVW}vw !important; line-height: ${lhVW}vw !important; }`);
+            cssRules.add(`td.${textClass} { padding-top: ${ptVW}vw !important; padding-left: ${pxVW}vw !important; padding-right: ${pxVW}vw !important; }`);
         }
 
         return { 
@@ -2011,9 +2028,6 @@
         }
       });
       if (currentRow) rows.push(currentRow);
-
-      let attachments = [];
-      let cssRules = new Set(); 
 
       let htmlTable = `<table width="850" border="0" cellpadding="0" cellspacing="0" align="center" bgcolor="#ffffff" class="force-white main-wrapper" style="width:100%; max-width:850px; background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; margin:0 auto;">`;
 
@@ -2144,8 +2158,8 @@ Content-Transfer-Encoding: 8bit
     
     /* BLOQUEAR AUTO-ZOOM DE TEXTO EN OUTLOOK iOS/ANDROID Y APPLE MAIL */
     body, table, td, p, a, li, blockquote, div, span { 
-        -ms-text-size-adjust: none !important; 
-        -webkit-text-size-adjust: none !important; 
+        -ms-text-size-adjust: 100% !important; 
+        -webkit-text-size-adjust: 100% !important; 
     }
     
     /* RESET ABSOLUTO DE ESPACIOS BASURA */
@@ -2178,9 +2192,12 @@ Content-Transfer-Encoding: 8bit
         }
     }
 
-    ${[...cssRules].join('\n    ')}
-
-    @media only screen and (max-width: 600px) {
+    /* MEDIA QUERY ENCADENADO A VW PARA CELULARES - ESCALA PROPORCIONAL */
+    @media only screen and (max-width: 850px) {
+        .resp-img { width: 100% !important; max-width: 100% !important; height: auto !important; }
+        
+        ${[...cssRules].join('\n        ')}
+        
         table[class*="responsive-table"],
         table[class*="responsive-table"] > tbody,
         table[class*="responsive-table"] > tbody > tr { 
@@ -2192,8 +2209,6 @@ Content-Transfer-Encoding: 8bit
             display: block !important; 
             width: 100% !important; 
             box-sizing: border-box !important; 
-            padding-top: 0px !important; 
-            padding-bottom: 0px !important; 
         }
         
         td[class~="mobile-hide"], 
@@ -2214,24 +2229,14 @@ Content-Transfer-Encoding: 8bit
         }
         
         .text-content { 
-            padding-left: 20px !important; 
-            padding-right: 20px !important; 
-            padding-top: 10px !important;
-            padding-bottom: 10px !important;
             width: 100% !important; 
             box-sizing: border-box !important; 
-        }
-        .resp-img { 
-            width: 100% !important; 
-            max-width: 100% !important; 
-            height: auto !important; 
-            margin: 0 auto !important; 
         }
     }
   </style>
 </head>
 <body class="body force-white" bgcolor="#ffffff" style="margin:0; padding:0; background-color:#ffffff; font-family: Arial, Helvetica, sans-serif;">
-  <div class="force-white" style="background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); width:100%; -webkit-text-size-adjust: none; -ms-text-size-adjust: none;">
+  <div class="force-white" style="background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); width:100%;">
     <!--[if mso]>
     <table width="100%" border="0" cellpadding="0" cellspacing="0" align="center" bgcolor="#ffffff"><tr><td align="center" valign="top">
     <![endif]-->
