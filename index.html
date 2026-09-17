@@ -1355,6 +1355,29 @@
         } else if (type === 'text') { 
           document.getElementById('media-properties').style.display = 'none'; 
           document.getElementById('text-props').style.display = 'block'; 
+          
+          // NUEVO: Cargar los valores actuales del bloque de texto en el panel
+          let tEl = block.querySelector('.block-text');
+          if (tEl) {
+              let currentFont = tEl.style.fontFamily || 'Arial, sans-serif';
+              let fontSelect = document.getElementById('prop-font-family');
+              let foundMatch = false;
+              for (let i = 0; i < fontSelect.options.length; i++) {
+                  // Limpiar comillas para comparar correctamente (ej: "'Segoe UI'" vs "Segoe UI")
+                  if (currentFont.toLowerCase().includes(fontSelect.options[i].value.split(',')[0].replace(/['"]/g, '').toLowerCase())) {
+                      fontSelect.selectedIndex = i;
+                      foundMatch = true;
+                      break;
+                  }
+              }
+              if (!foundMatch) fontSelect.value = "Arial, sans-serif";
+
+              document.getElementById('prop-font-size').value = parseInt(tEl.style.fontSize) || 14;
+              document.getElementById('prop-line-height').value = parseInt(tEl.style.lineHeight) || 20;
+              document.getElementById('prop-padding-top').value = parseInt(tEl.style.paddingTop) || 10;
+              document.getElementById('prop-padding-sides').value = parseInt(tEl.style.paddingLeft) || 15;
+          }
+
         } else if (type === 'spacer') { 
           document.getElementById('media-properties').style.display = 'none'; 
           document.getElementById('text-props').style.display = 'none'; 
@@ -1783,6 +1806,14 @@
           } 
           block.addEventListener('dblclick', function(e) { if (selectedBlocks.size === 1) { content.contentEditable = true; content.classList.add('editing'); if (content.innerHTML.includes('icon-text.png')) content.innerHTML = ''; content.focus(); } }); 
           content.addEventListener('blur', function() { content.contentEditable = false; content.classList.remove('editing'); if (content.innerHTML.trim() === '' || content.innerHTML === '<br>') { content.innerHTML = '<div style="text-align:center;"><img src="icon-text.png" style="width:35px; opacity:0.25; filter: invert(1); pointer-events:none; user-select:none;"></div>'; } saveState(); }); 
+
+          // EVENTO DE PEGADO (Limpiar formato como el Bloc de Notas)
+          content.addEventListener('paste', function(e) {
+              e.preventDefault();
+              let text = (e.clipboardData || window.clipboardData).getData('text/plain');
+              document.execCommand('insertText', false, text);
+          });
+
           block.appendChild(content); 
       } else if (type === 'gif') { 
           if (!restoreData) block.style.height = '150px'; 
