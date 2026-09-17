@@ -1941,7 +1941,7 @@
             htmlContent = ''; 
         }
 
-        // LIMPIEZA EXTREMA: MATAR ESTILOS DE WORD/OUTLOOK DEL PAYLOAD
+        // LIMPIEZA EXTREMA: MATAR ESTILOS DE WORD/OUTLOOK DEL PAYLOAD Y SALTO DE LINEA BASURA
         if (tEl) {
             htmlContent = htmlContent.replace(/style="([^"]*)"/g, function(match, styleRules) {
                 let cleanedRules = styleRules
@@ -1955,6 +1955,7 @@
             });
             htmlContent = htmlContent.replace(/<font[^>]*>/gi, '').replace(/<\/font>/gi, '');
             htmlContent = htmlContent.replace(/class="[^"]*"/gi, '');
+            htmlContent = htmlContent.replace(/<br\s*\/?>\s*$/i, ''); // Remueve br ocultos al final (arregla gaps de gmail)
         }
         
         let fsVal = 14, lhVal = 20, ptVal = 10, pxVal = 15;
@@ -2007,12 +2008,11 @@
       let attachments = [];
       let cssRules = new Set(); 
 
-      let htmlTable = `
-<table width="850" border="0" cellpadding="0" cellspacing="0" align="center" bgcolor="#ffffff" class="force-white main-wrapper" style="width:100%; max-width:850px; background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; margin:0 auto;">`;
+      // SIN ESPACIOS EN BLANCO EN LA ESTRUCTURA TABULAR PARA QUE GMAIL NO INYECTE HUECOS
+      let htmlTable = `<table width="850" border="0" cellpadding="0" cellspacing="0" align="center" bgcolor="#ffffff" class="force-white main-wrapper" style="width:100%; max-width:850px; background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; margin:0 auto;">`;
 
       let currentY = 0;
       rows.forEach(row => {
-        // ESPACIO ENTRE FILAS (AHORA EN PIXELES ABSOLUTOS)
         if (row.top > currentY) { 
            let gap = row.top - currentY; 
            htmlTable += `<tr class="mobile-gap-row" bgcolor="#ffffff"><td width="850" bgcolor="#ffffff" height="${gap}" style="height:${gap}px; font-size:0px; line-height:0px; padding:0; margin:0; mso-line-height-rule:exactly; background-color:#ffffff; border-collapse:collapse;" class="force-white">&nbsp;</td></tr>`; 
@@ -2042,7 +2042,6 @@
              if (b.css && b.css.includes('justify-content: center')) vAlignHtml = 'middle';
              if (b.css && b.css.includes('justify-content: flex-end')) vAlignHtml = 'bottom';
 
-             // ANCHOS FIJOS PARA MATAR EL RESIZE DE OUTLOOK
              htmlTable += `<td width="${safeW}" valign="${vAlignHtml}" bgcolor="#ffffff" class="responsive-td force-white" style="width:${safeW}px; padding:0; margin:0; background-color:#ffffff; border-collapse:collapse; font-size:0px; line-height:0px; mso-line-height-rule:exactly;">`;
              
              if (yOffset > 0) {
@@ -2067,23 +2066,14 @@
                 if (b.href) htmlTable += `<a href="${b.href}" target="_blank" style="text-decoration:none; display:block; margin:0; padding:0;">${imgTag}</a>`; else htmlTable += imgTag;
              } else if (b.type === 'text') {
                  let textClass = `tx-${b.fsVal}-${b.lhVal}-${b.ptVal}-${b.pxVal}`;
-                 let fsVW = (b.fsVal / 850 * 100).toFixed(4);
-                 let lhVW = (b.lhVal / 850 * 100).toFixed(4);
-                 let ptVW = (b.ptVal / 850 * 100).toFixed(4);
-                 let pxVW = (b.pxVal / 850 * 100).toFixed(4);
-                 cssRules.add(`.${textClass} { font-size: ${fsVW}vw !important; line-height: ${lhVW}vw !important; padding-top: ${ptVW}vw !important; padding-left: ${pxVW}vw !important; padding-right: ${pxVW}vw !important; }`);
                  
-                 // ENVOLVEMOS EL CONTENIDO EN UN SPAN GLOBAL PARA FORZAR ARIAL AL MÁXIMO EN OUTLOOK
-                 htmlTable += `
-                 <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin:0; padding:0; border-collapse:collapse; table-layout:fixed;">
-                    <tr>
-                        <td align="${b.textAlign}" class="${textClass} text-content force-white" style="font-family: Arial, Helvetica, sans-serif !important; font-size:${b.fsVal}px; line-height:${b.lhVal}px; color:${b.colorVal}; padding-top:${b.ptVal}px; padding-left:${b.pxVal}px; padding-right:${b.pxVal}px; padding-bottom:0; mso-line-height-rule:exactly; background-color:#ffffff; word-break:break-word; text-align:${b.textAlign};">
-                            <span style="font-family: Arial, Helvetica, sans-serif !important; font-size:${b.fsVal}px; color:${b.colorVal};">
-                                ${b.html}
-                            </span>
-                        </td>
-                    </tr>
-                 </table>`;
+                 // ACA ESTÁ LA CLAVE PARA OUTLOOK MÓVIL: INYECTAR LAS MEDIDAS EXACTAS EN PX
+                 cssRules.add(`@media only screen and (max-width: 600px) { .${textClass}, .${textClass} * { font-size: ${b.fsVal}px !important; line-height: ${b.lhVal}px !important; } }`);
+                 
+                 let safeFontFamily = b.ffVal.replace(/"/g, "'");
+                 
+                 // BLOQUE DE TEXTO SIN !IMPORTANT EN ESTILOS EN LINEA, CON <FONT> COMO RESGUARDO PARA OUTLOOK DE ESCRITORIO
+                 htmlTable += `<table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin:0; padding:0; border-collapse:collapse; table-layout:fixed;"><tr><td align="${b.textAlign}" class="${textClass} text-content force-white" style="font-family: ${safeFontFamily}; font-size:${b.fsVal}px; line-height:${b.lhVal}px; color:${b.colorVal}; padding-top:${b.ptVal}px; padding-left:${b.pxVal}px; padding-right:${b.pxVal}px; padding-bottom:0; mso-line-height-rule:exactly; background-color:#ffffff; word-break:break-word; text-align:${b.textAlign};"><font face="${safeFontFamily}" color="${b.colorVal}" style="font-size:${b.fsVal}px; line-height:${b.lhVal}px;">${b.html}</font></td></tr></table>`;
              } else if (b.type === 'spacer') {
                  htmlTable += `<table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;"><tr><td height="${b.h}" style="height:${b.h}px; font-size:0px; line-height:0px; padding:0; margin:0; mso-line-height-rule:exactly; background-color:#ffffff;">&nbsp;</td></tr></table>`;
              }
@@ -2119,6 +2109,7 @@ Content-Transfer-Encoding: 8bit
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
   <meta name="x-apple-disable-message-reformatting">
   <meta name="color-scheme" content="light">
   <meta name="supported-color-schemes" content="light">
@@ -2126,7 +2117,6 @@ Content-Transfer-Encoding: 8bit
   
   <!--[if mso]>
   <style type="text/css">
-    /* BALA DE PLATA: Forzar Arial en Outlook desde la raíz */
     body, table, td, div, p, span, a, font, b, i, u, h1, h2, h3, h4, h5, h6 { 
         font-family: Arial, Helvetica, sans-serif !important; 
     }
@@ -2143,7 +2133,12 @@ Content-Transfer-Encoding: 8bit
       color-scheme: light;
       supported-color-schemes: light;
     }
-    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    
+    /* BLOQUEAR AUTO-ZOOM DE TEXTO EN OUTLOOK iOS/ANDROID Y APPLE MAIL */
+    body, table, td, p, a, li, blockquote { 
+        -ms-text-size-adjust: 100%; 
+        -webkit-text-size-adjust: 100%; 
+    }
     
     /* RESET ABSOLUTO DE ESPACIOS BASURA */
     table, td, p, h1, h2, h3, h4, h5, h6, div, span { margin: 0; padding: 0; }
@@ -2154,9 +2149,6 @@ Content-Transfer-Encoding: 8bit
     .text-content p, .text-content h1, .text-content h2, .text-content h3 { margin: 0 !important; padding: 0 !important; }
     .text-content * {
         font-family: Arial, Helvetica, sans-serif !important;
-        font-size: inherit !important;
-        line-height: inherit !important;
-        color: inherit !important;
         margin: 0 !important;
         padding: 0 !important;
     }
@@ -2180,10 +2172,7 @@ Content-Transfer-Encoding: 8bit
         }
     }
 
-    @media only screen and (min-width: 601px) and (max-width: 850px) {
-        .resp-img { width: 100% !important; max-width: 100% !important; height: auto !important; }
-        ${[...cssRules].join('\n        ')}
-    }
+    ${[...cssRules].join('\n    ')}
 
     @media only screen and (max-width: 600px) {
         table[class*="responsive-table"],
