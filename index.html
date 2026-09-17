@@ -398,8 +398,6 @@
       font-family: inherit !important;
       font-size: inherit !important;
       line-height: inherit !important;
-      margin: 0 !important;
-      padding: 0 !important;
     }
     
     .delete-btn { 
@@ -1464,14 +1462,6 @@
       tEl.style.paddingTop = document.getElementById('prop-padding-top').value + 'px'; 
       tEl.style.paddingLeft = document.getElementById('prop-padding-sides').value + 'px'; 
       tEl.style.paddingRight = document.getElementById('prop-padding-sides').value + 'px'; 
-      
-      tEl.querySelectorAll('*').forEach(child => {
-          child.style.fontFamily = 'inherit';
-          child.style.fontSize = 'inherit';
-          child.style.lineHeight = 'inherit';
-          child.style.margin = '0';
-          child.style.padding = '0';
-      });
 
       saveState(); 
     }
@@ -1928,7 +1918,7 @@
     }
     
     // ==========================================
-    // EXPORTACIÓN RESPONSIVE (BLANCO ABSOLUTO FORZADO Y LIMPIEZA DE OUTLOOK)
+    // EXPORTACIÓN RESPONSIVE (INYECCIÓN DOM ESTRICTA PARA OUTLOOK)
     // ==========================================
     function exportEML() {
       clearSelection();
@@ -1941,23 +1931,6 @@
             htmlContent = ''; 
         }
 
-        // LIMPIEZA EXTREMA: MATAR ESTILOS DE WORD/OUTLOOK DEL PAYLOAD Y SALTO DE LINEA BASURA
-        if (tEl) {
-            htmlContent = htmlContent.replace(/style="([^"]*)"/g, function(match, styleRules) {
-                let cleanedRules = styleRules
-                    .replace(/font-family\s*:[^;]+;?/gi, '')
-                    .replace(/font-size\s*:[^;]+;?/gi, '')
-                    .replace(/line-height\s*:[^;]+;?/gi, '')
-                    .replace(/margin[^:]*:[^;]+;?/gi, '')
-                    .replace(/padding[^:]*:[^;]+;?/gi, '')
-                    .replace(/mso-[^:]+:[^;]+;?/gi, '');
-                return cleanedRules.trim() === '' ? '' : `style="${cleanedRules}"`;
-            });
-            htmlContent = htmlContent.replace(/<font[^>]*>/gi, '').replace(/<\/font>/gi, '');
-            htmlContent = htmlContent.replace(/class="[^"]*"/gi, '');
-            htmlContent = htmlContent.replace(/<br\s*\/?>\s*$/i, ''); // Remueve br ocultos al final (arregla gaps de gmail)
-        }
-        
         let fsVal = 14, lhVal = 20, ptVal = 10, pxVal = 15;
         let ffVal = 'Arial, Helvetica, sans-serif'; 
         let colorVal = '#666666';
@@ -1972,6 +1945,40 @@
             colorVal = tEl.style.color || compStyle.color || '#666666';
             colorVal = rgbToHex(colorVal); 
             textAlign = tEl.style.textAlign || compStyle.textAlign || 'left';
+            
+            let safeFontFamily = ffVal.replace(/"/g, "'");
+
+            // PROCESAMIENTO DOM: BLINDAJE ANTI-OUTLOOK EXTREMO
+            let tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlContent;
+            
+            // Convertir <font> a <span>
+            let fonts = tempDiv.querySelectorAll('font');
+            fonts.forEach(f => {
+                let span = document.createElement('span');
+                span.innerHTML = f.innerHTML;
+                if(f.color) span.style.color = f.color;
+                if(f.face) span.style.fontFamily = f.face;
+                span.style.cssText += f.style.cssText;
+                f.replaceWith(span);
+            });
+
+            // Aplicar estilos forzados a cada nodo interno
+            tempDiv.querySelectorAll('*').forEach(el => {
+                el.removeAttribute('class');
+                for (let i = el.attributes.length - 1; i >= 0; i--) {
+                    if (el.attributes[i].name.startsWith('mso-')) {
+                        el.removeAttribute(el.attributes[i].name);
+                    }
+                }
+                if (!el.style.fontFamily) el.style.fontFamily = safeFontFamily;
+                if (!el.style.fontSize) el.style.fontSize = fsVal + 'px';
+                if (!el.style.lineHeight) el.style.lineHeight = lhVal + 'px';
+                if (!el.style.color) el.style.color = colorVal;
+                el.style.msoLineHeightRule = 'exactly';
+            });
+
+            htmlContent = tempDiv.innerHTML.replace(/<br\s*\/?>\s*$/i, ''); // Mata BR final (huecos en Gmail)
         }
 
         return { 
@@ -2008,7 +2015,6 @@
       let attachments = [];
       let cssRules = new Set(); 
 
-      // SIN ESPACIOS EN BLANCO EN LA ESTRUCTURA TABULAR PARA QUE GMAIL NO INYECTE HUECOS
       let htmlTable = `<table width="850" border="0" cellpadding="0" cellspacing="0" align="center" bgcolor="#ffffff" class="force-white main-wrapper" style="width:100%; max-width:850px; background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; margin:0 auto;">`;
 
       let currentY = 0;
@@ -2066,14 +2072,16 @@
                 if (b.href) htmlTable += `<a href="${b.href}" target="_blank" style="text-decoration:none; display:block; margin:0; padding:0;">${imgTag}</a>`; else htmlTable += imgTag;
              } else if (b.type === 'text') {
                  let textClass = `tx-${b.fsVal}-${b.lhVal}-${b.ptVal}-${b.pxVal}`;
-                 
-                 // ACA ESTÁ LA CLAVE PARA OUTLOOK MÓVIL: INYECTAR LAS MEDIDAS EXACTAS EN PX
-                 cssRules.add(`@media only screen and (max-width: 600px) { .${textClass}, .${textClass} * { font-size: ${b.fsVal}px !important; line-height: ${b.lhVal}px !important; } }`);
-                 
                  let safeFontFamily = b.ffVal.replace(/"/g, "'");
                  
-                 // BLOQUE DE TEXTO SIN !IMPORTANT EN ESTILOS EN LINEA, CON <FONT> COMO RESGUARDO PARA OUTLOOK DE ESCRITORIO
-                 htmlTable += `<table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin:0; padding:0; border-collapse:collapse; table-layout:fixed;"><tr><td align="${b.textAlign}" class="${textClass} text-content force-white" style="font-family: ${safeFontFamily}; font-size:${b.fsVal}px; line-height:${b.lhVal}px; color:${b.colorVal}; padding-top:${b.ptVal}px; padding-left:${b.pxVal}px; padding-right:${b.pxVal}px; padding-bottom:0; mso-line-height-rule:exactly; background-color:#ffffff; word-break:break-word; text-align:${b.textAlign};"><font face="${safeFontFamily}" color="${b.colorVal}" style="font-size:${b.fsVal}px; line-height:${b.lhVal}px;">${b.html}</font></td></tr></table>`;
+                 htmlTable += `
+                 <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin:0; padding:0; border-collapse:collapse; table-layout:fixed;">
+                    <tr>
+                        <td align="${b.textAlign}" class="${textClass} text-content force-white" style="font-family: ${safeFontFamily}; font-size:${b.fsVal}px; line-height:${b.lhVal}px; color:${b.colorVal}; padding-top:${b.ptVal}px; padding-left:${b.pxVal}px; padding-right:${b.pxVal}px; padding-bottom:0; mso-line-height-rule:exactly; background-color:#ffffff; word-break:break-word; text-align:${b.textAlign};">
+                            ${b.html}
+                        </td>
+                    </tr>
+                 </table>`;
              } else if (b.type === 'spacer') {
                  htmlTable += `<table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;"><tr><td height="${b.h}" style="height:${b.h}px; font-size:0px; line-height:0px; padding:0; margin:0; mso-line-height-rule:exactly; background-color:#ffffff;">&nbsp;</td></tr></table>`;
              }
@@ -2135,9 +2143,9 @@ Content-Transfer-Encoding: 8bit
     }
     
     /* BLOQUEAR AUTO-ZOOM DE TEXTO EN OUTLOOK iOS/ANDROID Y APPLE MAIL */
-    body, table, td, p, a, li, blockquote { 
-        -ms-text-size-adjust: 100%; 
-        -webkit-text-size-adjust: 100%; 
+    body, table, td, p, a, li, blockquote, div, span { 
+        -ms-text-size-adjust: none !important; 
+        -webkit-text-size-adjust: none !important; 
     }
     
     /* RESET ABSOLUTO DE ESPACIOS BASURA */
@@ -2149,8 +2157,6 @@ Content-Transfer-Encoding: 8bit
     .text-content p, .text-content h1, .text-content h2, .text-content h3 { margin: 0 !important; padding: 0 !important; }
     .text-content * {
         font-family: Arial, Helvetica, sans-serif !important;
-        margin: 0 !important;
-        padding: 0 !important;
     }
 
     /* FORZAR BLANCO ABSOLUTO (Hack estructural para Outlook/Gmail Dark Mode) */
@@ -2225,7 +2231,7 @@ Content-Transfer-Encoding: 8bit
   </style>
 </head>
 <body class="body force-white" bgcolor="#ffffff" style="margin:0; padding:0; background-color:#ffffff; font-family: Arial, Helvetica, sans-serif;">
-  <div class="force-white" style="background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); width:100%;">
+  <div class="force-white" style="background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); width:100%; -webkit-text-size-adjust: none; -ms-text-size-adjust: none;">
     <!--[if mso]>
     <table width="100%" border="0" cellpadding="0" cellspacing="0" align="center" bgcolor="#ffffff"><tr><td align="center" valign="top">
     <![endif]-->
