@@ -392,6 +392,15 @@
       border: 1px dashed #0d99ff; 
       user-select: text; 
     }
+
+    /* FORZAR HERENCIA EN TEXTOS PARA MATAR ESTILOS BASURA DE WORD (EN EL EDITOR) */
+    .block-text * {
+      font-family: inherit !important;
+      font-size: inherit !important;
+      line-height: inherit !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
     
     .delete-btn { 
       position: absolute; 
@@ -580,7 +589,6 @@
 
   <div id="welcome-screen">
     <div class="ws-sidebar">
-      <!-- ÍCONO DE LA APP EN EL INICIO -->
       <h1><img src="app-logo.ico" style="width: 32px; height: 32px; object-fit: contain;" alt="" onerror="this.style.display='none'"> BlockMail <small id="ws-app-version" style="font-size: 12px; color: #888; font-weight: normal;"></small></h1>
       <button class="ws-btn-primary" onclick="newProject()">Archivo nuevo</button>
       <button class="ws-btn-secondary" onclick="triggerLoadProject()">Abrir</button>
@@ -784,7 +792,6 @@
     // ==========================================
     // LÓGICA DE SISTEMA (ELECTRON E IPC)
     // ==========================================
-    // SAFE JSON PARSE: Se declara primero para evitar bloqueos
     function safeJSONParse(key, fallback) {
       try {
         let item = localStorage.getItem(key);
@@ -798,7 +805,6 @@
 
     let fs, path, ipcRenderer;
     
-    // Carga de módulos limpia sin chequeos que rompan el entorno nativo de Electron
     try { 
       fs = require('fs'); 
       path = require('path'); 
@@ -1464,12 +1470,27 @@
       let block = Array.from(selectedBlocks)[0]; 
       if (block.dataset.type !== 'text') return; 
       let tEl = block.querySelector('.block-text'); 
-      tEl.style.fontFamily = document.getElementById('prop-font-family').value; 
-      tEl.style.fontSize = document.getElementById('prop-font-size').value + 'px'; 
-      tEl.style.lineHeight = document.getElementById('prop-line-height').value + 'px'; 
+      
+      let ff = document.getElementById('prop-font-family').value;
+      let fs = document.getElementById('prop-font-size').value + 'px';
+      let lh = document.getElementById('prop-line-height').value + 'px';
+      
+      tEl.style.fontFamily = ff; 
+      tEl.style.fontSize = fs; 
+      tEl.style.lineHeight = lh; 
       tEl.style.paddingTop = document.getElementById('prop-padding-top').value + 'px'; 
       tEl.style.paddingLeft = document.getElementById('prop-padding-sides').value + 'px'; 
       tEl.style.paddingRight = document.getElementById('prop-padding-sides').value + 'px'; 
+      
+      // FORZAR A TODOS LOS HIJOS A HEREDAR PARA MATAR ESTILOS BASURA AL INSTANTE
+      tEl.querySelectorAll('*').forEach(child => {
+          child.style.fontFamily = 'inherit';
+          child.style.fontSize = 'inherit';
+          child.style.lineHeight = 'inherit';
+          child.style.margin = '0';
+          child.style.padding = '0';
+      });
+
       saveState(); 
     }
     
@@ -1947,7 +1968,6 @@
             ptVal = parseInt(tEl.style.paddingTop) || 0;
             pxVal = parseInt(tEl.style.paddingLeft) || 0;
             
-            // Extraer tipografía real del DOM
             let compStyle = window.getComputedStyle(tEl);
             ffVal = tEl.style.fontFamily || compStyle.fontFamily || 'Arial, sans-serif';
         }
@@ -1987,9 +2007,9 @@
       let cssRules = new Set(); 
 
       let htmlTable = `
-<table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#ffffff" class="force-white" style="width:100%; background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); margin:0; padding:0;">
+<table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#ffffff" class="force-white" style="width:100%; background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); margin:0; padding:0; border-collapse:collapse;">
 <tr bgcolor="#ffffff">
-<td align="center" valign="top" bgcolor="#ffffff" class="force-white" style="padding: 0; background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff);">
+<td align="center" valign="top" bgcolor="#ffffff" class="force-white" style="padding: 0; margin:0; background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); border-collapse:collapse;">
   <table width="100%" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#ffffff" class="force-white main-wrapper" style="width:100%; max-width:850px; background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; margin:0 auto;">`;
 
       let currentY = 0;
@@ -1997,19 +2017,10 @@
         if (row.top > currentY) { 
            let gap = row.top - currentY; 
            let percGap = Number((gap / 850 * 100).toFixed(4));
-           htmlTable += `<tr class="mobile-gap-row" bgcolor="#ffffff"><td bgcolor="#ffffff" style="padding:0; margin:0; font-size:0px; line-height:0px; background-color:#ffffff;" class="force-white">
-              <!--[if mso]>
-              <table border="0" cellpadding="0" cellspacing="0" width="850"><tr><td height="${gap}" style="height:${gap}px; font-size:0px; line-height:0px;">&nbsp;</td></tr></table>
-              <![endif]-->
-              <!--[if !mso]><!-->
-              <div class="mobile-hide force-white" style="display:block; width:100%; padding-top:${percGap}%; background-color:#ffffff;"></div>
-              <!--<![endif]-->
-           </td></tr>`; 
+           htmlTable += `<tr class="mobile-gap-row" bgcolor="#ffffff"><td bgcolor="#ffffff" style="padding:0; margin:0; font-size:0px; line-height:0px; background-color:#ffffff; border-collapse:collapse;" class="force-white"><!--[if mso]><table border="0" cellpadding="0" cellspacing="0" width="850"><tr><td height="${gap}" style="height:${gap}px; font-size:0px; line-height:0px; padding:0; margin:0; border-collapse:collapse;"></td></tr></table><![endif]--><!--[if !mso]><!--><div class="mobile-hide force-white" style="display:block; width:100%; height:${gap}px; padding-top:${percGap}%; background-color:#ffffff; font-size:0px; line-height:0px;"></div><!--<![endif]--></td></tr>`; 
         }
         
-        htmlTable += `<tr bgcolor="#ffffff"><td bgcolor="#ffffff" style="padding:0; margin:0; background-color:#ffffff;" class="force-white">
-          <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" class="responsive-table force-white" style="width:100%; table-layout:fixed; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; background-color:#ffffff;">
-            <tr bgcolor="#ffffff">`;
+        htmlTable += `<tr bgcolor="#ffffff"><td bgcolor="#ffffff" style="padding:0; margin:0; background-color:#ffffff; border-collapse:collapse;" class="force-white"><table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" class="responsive-table force-white" style="width:100%; table-layout:fixed; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; background-color:#ffffff;"><tr bgcolor="#ffffff">`;
             
         row.blocks.sort((a, b) => a.x - b.x); 
         let currentX = 0;
@@ -2020,7 +2031,7 @@
           if (startX > currentX) { 
              let gap = startX - currentX; 
              let percGap = Number((gap / 850 * 100).toFixed(4));
-             htmlTable += `<td width="${percGap}%" bgcolor="#ffffff" class="mobile-hide force-white" style="width:${percGap}%; font-size:1px; line-height:1px; padding:0; margin:0; mso-line-height-rule:exactly; background-color:#ffffff;">&nbsp;</td>`; 
+             htmlTable += `<td width="${percGap}%" bgcolor="#ffffff" class="mobile-hide force-white" style="width:${percGap}%; font-size:0px; line-height:0px; padding:0; margin:0; mso-line-height-rule:exactly; background-color:#ffffff; border-collapse:collapse;"></td>`; 
           }
           
           let safeW = b.w - (startX - b.x);
@@ -2035,18 +2046,15 @@
              if (b.css && b.css.includes('justify-content: center')) vAlignHtml = 'middle';
              if (b.css && b.css.includes('justify-content: flex-end')) vAlignHtml = 'bottom';
              
-             htmlTable += `<td width="${percW}%" valign="${vAlignHtml}" bgcolor="#ffffff" class="responsive-td force-white" style="width:${percW}%; padding:0; margin:0; background-color:#ffffff;">`;
+             // SOLUCIÓN GMAIL: Cero interlineado para contenedores de imagen, interlineado real para textos
+             let tdFontSize = b.type === 'text' ? b.fsVal + 'px' : '0px';
+             let tdLineHeight = b.type === 'text' ? b.lhVal + 'px' : '0px';
+
+             htmlTable += `<td width="${percW}%" valign="${vAlignHtml}" bgcolor="#ffffff" class="responsive-td force-white" style="width:${percW}%; padding:0; margin:0; background-color:#ffffff; border-collapse:collapse; font-size:${tdFontSize}; line-height:${tdLineHeight}; mso-line-height-rule:exactly;">`;
              
              if (yOffset > 0) {
                  let yOffsetPerc = Number((yOffset / safeW * 100).toFixed(4));
-                 htmlTable += `
-                 <!--[if mso]>
-                 <table border="0" cellpadding="0" cellspacing="0" width="${safeW}"><tr><td height="${yOffset}" style="height:${yOffset}px; font-size:0px; line-height:0px;">&nbsp;</td></tr></table>
-                 <![endif]-->
-                 <!--[if !mso]><!-->
-                 <div class="mobile-hide force-white" style="display:block; width:100%; padding-top:${yOffsetPerc}%; background-color:#ffffff;"></div>
-                 <!--<![endif]-->
-                 `;
+                 htmlTable += `<!--[if mso]><table border="0" cellpadding="0" cellspacing="0" width="${safeW}"><tr><td height="${yOffset}" style="height:${yOffset}px; font-size:0px; line-height:0px; padding:0; margin:0; border-collapse:collapse;"></td></tr></table><![endif]--><!--[if !mso]><!--><div class="mobile-hide force-white" style="display:block; width:100%; height:${yOffset}px; padding-top:${yOffsetPerc}%; background-color:#ffffff; font-size:0px; line-height:0px;"></div><!--<![endif]-->`;
              }
              
              if (b.type === 'image' || b.type === 'gif') {
@@ -2058,21 +2066,14 @@
                     let cid = 'img_' + attachments.length + '@newsletter';
                     let base64Data = b.src.split(',')[1]; 
                     attachments.push({ cid, mimeType, ext, base64Data });
-                    imgTag = `<img class="resp-img" src="cid:${cid}" width="${safeW}" style="display:block; width:100%; max-width:${safeW}px; border:0; outline:none; text-decoration:none;" />`;
+                    imgTag = `<img class="resp-img" src="cid:${cid}" width="${safeW}" style="display:block; width:100%; max-width:${safeW}px; border:0; outline:none; text-decoration:none; margin:0; padding:0;" />`;
                 } else if (b.src) { 
-                    imgTag = `<img class="resp-img" src="${b.src}" width="${safeW}" style="display:block; width:100%; max-width:${safeW}px; border:0; outline:none; text-decoration:none;" />`; 
+                    imgTag = `<img class="resp-img" src="${b.src}" width="${safeW}" style="display:block; width:100%; max-width:${safeW}px; border:0; outline:none; text-decoration:none; margin:0; padding:0;" />`; 
                 } else { 
                     let hwPerc = Number((b.h / safeW * 100).toFixed(4));
-                    imgTag = `
-                    <!--[if mso]>
-                    <table border="0" cellpadding="0" cellspacing="0" width="${safeW}"><tr><td height="${b.h}" style="height:${b.h}px; font-size:0px; line-height:0px; background-color:#e0e0e0;">&nbsp;</td></tr></table>
-                    <![endif]-->
-                    <!--[if !mso]><!-->
-                    <div style="display:block; width:100%; padding-top:${hwPerc}%; background-color:#e0e0e0;"></div>
-                    <!--<![endif]-->
-                    `;
+                    imgTag = `<!--[if mso]><table border="0" cellpadding="0" cellspacing="0" width="${safeW}"><tr><td height="${b.h}" style="height:${b.h}px; font-size:0px; line-height:0px; background-color:#e0e0e0; border-collapse:collapse; padding:0; margin:0;"></td></tr></table><![endif]--><!--[if !mso]><!--><div style="display:block; width:100%; height:${b.h}px; padding-top:${hwPerc}%; background-color:#e0e0e0; font-size:0px; line-height:0px;"></div><!--<![endif]-->`;
                 }
-                if (b.href) htmlTable += `<a href="${b.href}" target="_blank" style="text-decoration:none; display:block;">${imgTag}</a>`; else htmlTable += imgTag;
+                if (b.href) htmlTable += `<a href="${b.href}" target="_blank" style="text-decoration:none; display:block; margin:0; padding:0;">${imgTag}</a>`; else htmlTable += imgTag;
              } else if (b.type === 'text') {
                  let textClass = `tx-${b.fsVal}-${b.lhVal}-${b.ptVal}-${b.pxVal}`;
                  let fsVW = (b.fsVal / 850 * 100).toFixed(4);
@@ -2081,19 +2082,11 @@
                  let pxVW = (b.pxVal / 850 * 100).toFixed(4);
                  cssRules.add(`.${textClass} { font-size: ${fsVW}vw !important; line-height: ${lhVW}vw !important; padding-top: ${ptVW}vw !important; padding-left: ${pxVW}vw !important; padding-right: ${pxVW}vw !important; }`);
                  
-                 // Inyectamos font-family limpio y mso-line-height-rule:exactly
                  let safeFontFamily = b.ffVal.replace(/"/g, "'");
-                 htmlTable += `<div class="${textClass} text-content force-white" style="${b.css}; font-family: ${safeFontFamily}; font-size:${b.fsVal}px; line-height:${b.lhVal}px; padding-top:${b.ptVal}px; padding-left:${b.pxVal}px; padding-right:${b.pxVal}px; box-sizing:border-box; margin:0; display:block; background-color:#ffffff; mso-line-height-rule:exactly;">${b.html}</div>`;
+                 htmlTable += `<div class="${textClass} text-content force-white" style="${b.css}; font-family: ${safeFontFamily}; font-size:${b.fsVal}px; line-height:${b.lhVal}px; padding-top:${b.ptVal}px; padding-left:${b.pxVal}px; padding-right:${b.pxVal}px; box-sizing:border-box; margin:0; padding-bottom:0; display:block; background-color:#ffffff; mso-line-height-rule:exactly;">${b.html}</div>`;
              } else if (b.type === 'spacer') {
                  let spacerPerc = Number((b.h / safeW * 100).toFixed(4));
-                 htmlTable += `
-                 <!--[if mso]>
-                 <table border="0" cellpadding="0" cellspacing="0" width="${safeW}"><tr><td height="${b.h}" style="height:${b.h}px; font-size:0px; line-height:0px; background-color:#ffffff;">&nbsp;</td></tr></table>
-                 <![endif]-->
-                 <!--[if !mso]><!-->
-                 <div class="mobile-spacer force-white" style="display:block; width:100%; padding-top:${spacerPerc}%; background-color:#ffffff;"></div>
-                 <!--<![endif]-->
-                 `;
+                 htmlTable += `<!--[if mso]><table border="0" cellpadding="0" cellspacing="0" width="${safeW}"><tr><td height="${b.h}" style="height:${b.h}px; font-size:0px; line-height:0px; background-color:#ffffff; border-collapse:collapse; padding:0; margin:0;"></td></tr></table><![endif]--><!--[if !mso]><!--><div class="mobile-spacer force-white" style="display:block; width:100%; height:${b.h}px; padding-top:${spacerPerc}%; background-color:#ffffff; font-size:0px; line-height:0px;"></div><!--<![endif]-->`;
              }
              
              htmlTable += `</td>`;
@@ -2104,7 +2097,7 @@
         if (currentX < 850) { 
            let rem = 850 - currentX;
            let percRem = Number((rem / 850 * 100).toFixed(4));
-           htmlTable += `<td width="${percRem}%" bgcolor="#ffffff" class="mobile-hide force-white" style="width:${percRem}%; font-size:1px; line-height:1px; padding:0; margin:0; mso-line-height-rule:exactly; background-color:#ffffff;">&nbsp;</td>`; 
+           htmlTable += `<td width="${percRem}%" bgcolor="#ffffff" class="mobile-hide force-white" style="width:${percRem}%; font-size:0px; line-height:0px; padding:0; margin:0; mso-line-height-rule:exactly; background-color:#ffffff; border-collapse:collapse;"></td>`; 
         }
         htmlTable += `</tr></table></td></tr>`;
         currentY = row.bottom;
@@ -2145,17 +2138,28 @@ Content-Transfer-Encoding: 8bit
       supported-color-schemes: light;
     }
     body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
-    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
-    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; display: block; }
-    table { border-collapse: collapse !important; border-spacing: 0 !important; }
     
+    /* RESET ABSOLUTO DE ESPACIOS BASURA */
+    table, td, p, h1, h2, h3, h4, h5, h6, div, span { margin: 0; padding: 0; }
+    table, td { mso-table-lspace: 0pt !important; mso-table-rspace: 0pt !important; border-collapse: collapse !important; border-spacing: 0 !important; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; display: block; line-height: 100%; }
+    
+    /* FORZAR HERENCIA AL CONTENIDO DE TEXTO PARA MATAR AL GHOST DE WORD */
+    .text-content p, .text-content h1, .text-content h2, .text-content h3 { margin: 0 !important; padding: 0 !important; }
+    .text-content * {
+        font-family: inherit !important;
+        font-size: inherit !important;
+        line-height: inherit !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
     /* FORZAR BLANCO ABSOLUTO (Hack estructural para Outlook/Gmail Dark Mode) */
     body, .force-white { 
         background-color: #ffffff !important; 
         background-image: linear-gradient(#ffffff, #ffffff) !important; 
     }
     
-    /* Fix específico y brutal para la App de Gmail en Android/iOS */
     u + .body .force-white,
     u + .body .main-wrapper {
         background-color: #ffffff !important;
