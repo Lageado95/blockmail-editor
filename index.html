@@ -1464,14 +1464,6 @@
       tEl.style.paddingTop = document.getElementById('prop-padding-top').value + 'px'; 
       tEl.style.paddingLeft = document.getElementById('prop-padding-sides').value + 'px'; 
       tEl.style.paddingRight = document.getElementById('prop-padding-sides').value + 'px'; 
-      
-      tEl.querySelectorAll('*').forEach(child => {
-          child.style.fontFamily = 'inherit';
-          child.style.fontSize = 'inherit';
-          child.style.lineHeight = 'inherit';
-          child.style.margin = '0';
-          child.style.padding = '0';
-      });
 
       saveState(); 
     }
@@ -1928,7 +1920,7 @@
     }
     
     // ==========================================
-    // EXPORTACIÓN RESPONSIVE (INYECCIÓN DOM ESTRICTA PARA OUTLOOK Y VW PROPORCIONAL)
+    // EXPORTACIÓN RESPONSIVE
     // ==========================================
     function exportEML() {
       clearSelection();
@@ -1941,7 +1933,6 @@
             htmlContent = ''; 
         }
 
-        // LIMPIEZA EXTREMA: MATAR ESTILOS DE WORD/OUTLOOK DEL PAYLOAD Y SALTO DE LINEA BASURA
         if (tEl) {
             htmlContent = htmlContent.replace(/style="([^"]*)"/g, function(match, styleRules) {
                 let cleanedRules = styleRules
@@ -1955,7 +1946,7 @@
             });
             htmlContent = htmlContent.replace(/<font[^>]*>/gi, '').replace(/<\/font>/gi, '');
             htmlContent = htmlContent.replace(/class="[^"]*"/gi, '');
-            htmlContent = htmlContent.replace(/<br\s*\/?>\s*$/i, ''); // Remueve br ocultos al final (arregla gaps de gmail)
+            htmlContent = htmlContent.replace(/<br\s*\/?>\s*$/i, ''); 
         }
         
         let fsVal = 14, lhVal = 20, ptVal = 10, pxVal = 15;
@@ -1975,11 +1966,9 @@
             
             let safeFontFamily = ffVal.replace(/"/g, "'");
 
-            // PROCESAMIENTO DOM: BLINDAJE ANTI-OUTLOOK EXTREMO
             let tempDiv = document.createElement('div');
             tempDiv.innerHTML = htmlContent;
             
-            // Convertir <font> a <span>
             let fonts = tempDiv.querySelectorAll('font');
             fonts.forEach(f => {
                 let span = document.createElement('span');
@@ -1990,7 +1979,6 @@
                 f.replaceWith(span);
             });
 
-            // Aplicar estilos forzados a cada nodo interno en PX absolutos
             tempDiv.querySelectorAll('*').forEach(el => {
                 el.removeAttribute('class');
                 for (let i = el.attributes.length - 1; i >= 0; i--) {
@@ -2005,7 +1993,7 @@
                 el.style.msoLineHeightRule = 'exactly';
             });
 
-            htmlContent = tempDiv.innerHTML.replace(/<br\s*\/?>\s*$/i, ''); // Mata BR final (huecos en Gmail)
+            htmlContent = tempDiv.innerHTML.replace(/<br\s*\/?>\s*$/i, '');
         }
 
         return { 
@@ -2024,23 +2012,39 @@
 
       if (blocks.length === 0) { alert("El lienzo está vacío. Agregá algo antes de exportar."); return; }
       
+      // NUEVO MOTOR DE FILAS: SOLUCIÓN DE COLISIÓN DE CAJAS
       blocks.sort((a, b) => a.y - b.y || a.x - b.x);
-      let rows = []; let currentRow = null;
+      let rows = [];
+      
       blocks.forEach(b => {
-        if (!currentRow) { currentRow = { top: b.y, bottom: b.y + b.h, blocks: [b] }; } 
-        else {
-          if (b.y < currentRow.bottom) { 
-             currentRow.blocks.push(b); 
-             if (b.y + b.h > currentRow.bottom) currentRow.bottom = b.y + b.h; 
-          } else { 
-             rows.push(currentRow); currentRow = { top: b.y, bottom: b.y + b.h, blocks: [b] }; 
+          let placed = false;
+          for (let i = 0; i < rows.length; i++) {
+              let row = rows[i];
+              let vertOverlap = (b.y < row.bottom && b.y + b.h > row.top);
+              if (vertOverlap) {
+                  // Si comparten espacio vertical, chequear si chocan en el eje X
+                  let horizOverlap = row.blocks.some(existingB => {
+                      return (b.x < existingB.x + existingB.w - 1) && (b.x + b.w > existingB.x + 1);
+                  });
+                  // Si NO chocan en X, pueden convivir en la misma fila de la tabla
+                  if (!horizOverlap) {
+                      row.blocks.push(b);
+                      row.top = Math.min(row.top, b.y);
+                      row.bottom = Math.max(row.bottom, b.y + b.h);
+                      placed = true;
+                      break;
+                  }
+              }
           }
-        }
+          // Si chocó en todas, se crea una fila estructural nueva obligatoriamente
+          if (!placed) {
+              rows.push({ top: b.y, bottom: b.y + b.h, blocks: [b] });
+          }
       });
-      if (currentRow) rows.push(currentRow);
+      
+      rows.sort((a, b) => a.top - b.top);
 
       let attachments = [];
-
       let htmlTable = `<table width="850" border="0" cellpadding="0" cellspacing="0" align="center" bgcolor="#ffffff" class="force-white" style="width:850px; min-width:850px; max-width:850px; background-color:#ffffff; background-image:linear-gradient(#ffffff, #ffffff); border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; margin:0 auto;">`;
 
       let currentY = 0;
